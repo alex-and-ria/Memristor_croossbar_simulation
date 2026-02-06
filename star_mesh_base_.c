@@ -168,6 +168,7 @@ void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsig
           nl_curr=(struct nds_lst*) malloc(1*sizeof(struct nds_lst)); nl_curr->i=i; nl_prev->next=nl_curr; nl_prev=nl_curr;
           cnt_tmps[i]=mesh_bdrs[i];
      }
+     nl_curr->next=NULL;
      //if(*nds_n==1) nds_lst_head->next=NULL; else nl_curr->next=NULL;
      nl_curr=nds_lst_head;
      while(nds_lst_head->next!=NULL){
@@ -344,4 +345,4 @@ void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsig
 }
 
 #include"node_schr2.c"
-
+int tst_pnt(unsigned int dim) {return dim;}
