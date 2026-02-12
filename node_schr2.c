@@ -129,6 +129,7 @@ void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned 
      double* vl_msh=(double*)malloc(((*len0)*((*len0)-1))*sizeof(double));
      double cnds_sum=0; unsigned int cnt_curr=0;
      unsigned int cnt_m=0; unsigned int iter_cnt=0;
+     
      for(unsigned int i=0,j=0,j0=0,j1=0;i<*len0 && j<nds_n && (fl_dbg==0 || (fl_dbg==1 && iter_cnt<num_iter));){//*nds_n is smaller or equal to *len0;
           while((*cl0)[i]<nds_td0[j]){
                i++;
@@ -152,12 +153,12 @@ void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned 
                     cnt_curr=(j1-j0-1)*(kk-j0)+(ll-j0-1);
                     cl_msh[cnt_curr]=(*rw0)[kk];//(*cl) gets smaller index;
                     rw_msh[cnt_curr]=(*rw0)[ll];//(*rw) gets bigger index;
-                    vl_msh[cnt_curr]=1./((1./(*vl0)[kk])*(1./(*vl0)[ll])*cnds_sum);
+                    vl_msh[cnt_curr]=1./(((1./(*vl0)[kk])*(1./(*vl0)[ll]))*cnds_sum);
                     
                     cnt_curr=(j1-j0-1)*(ll-j0)+(kk-j0);
                     cl_msh[cnt_curr]=(*rw0)[ll];//add duplicated to comply with adjacency matrix format;
                     rw_msh[cnt_curr]=(*rw0)[kk];
-                    vl_msh[cnt_curr]=vl_msh[cnt_curr];
+                    vl_msh[cnt_curr]=1./(((1./(*vl0)[kk])*(1./(*vl0)[ll]))*cnds_sum);
                     
                
                }
@@ -165,6 +166,7 @@ void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned 
           
           }
           //////////
+          
           cnt_curr++;
           unsigned int k0=0, k1=0; cnt_m=0;
           (*rw)=(unsigned int*)malloc(((j1-j0)*(j1-j0-1)+(*len0))*sizeof(unsigned int));//allocate space for number of new edges in the resulting (after node delteion) mesh and all the remaining nodes;
@@ -234,20 +236,20 @@ void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned 
 
 }
 
-void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsigned int *cl00, double ***vl0, double *vl00, unsigned int **len0,unsigned int ln, unsigned int *nds_td1, unsigned int nds_n1, unsigned int max_m_sz){
-     unsigned int n_th=(nds_n1%max_m_sz==0)?nds_n1/max_m_sz:nds_n1/max_m_sz+1;
-     unsigned int **nds_td0=(unsigned int**)malloc((n_th)*sizeof(unsigned int*));
-     (*cl0)=(unsigned int**)malloc(n_th*sizeof(unsigned int*));
-     (*rw0)=(unsigned int**)malloc(n_th*sizeof(unsigned int*));
-     (*vl0)=(double**)malloc(n_th*sizeof(double*));
-     unsigned int **cl=(unsigned int**)malloc(n_th*sizeof(unsigned int*));
-     unsigned int **rw=(unsigned int**)malloc(n_th*sizeof(unsigned int*));
-     double **vl=(double**)malloc(n_th*sizeof(double*));
-     (*len0)=(unsigned int*)malloc(n_th*sizeof(unsigned int));
+void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsigned int *cl00, double ***vl0, double *vl00, unsigned int **len0,unsigned int ln, unsigned int *nds_td1, unsigned int nds_n1, unsigned int max_m_sz, unsigned int* n_th){
+     (*n_th)=(nds_n1%max_m_sz==0)?nds_n1/max_m_sz:nds_n1/max_m_sz+1;
+     unsigned int **nds_td0=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
+     (*cl0)=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
+     (*rw0)=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
+     (*vl0)=(double**)malloc((*n_th)*sizeof(double*));
+     unsigned int **cl=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
+     unsigned int **rw=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
+     double **vl=(double**)malloc((*n_th)*sizeof(double*));
+     (*len0)=(unsigned int*)malloc((*n_th)*sizeof(unsigned int));
 
      
      
-     for(unsigned int i=0;i<n_th;i++){
+     for(unsigned int i=0;i<(*n_th);i++){
           (*len0)[i]=ln;
           (*cl0)[i]=(unsigned int*)malloc((*len0)[i]*sizeof(unsigned int));
           (*rw0)[i]=(unsigned int*)malloc((*len0)[i]*sizeof(unsigned int));
@@ -260,10 +262,10 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
           
           }
      }
-     nds_td0[n_th-1]=(unsigned int*)realloc(nds_td0[n_th-1],(nds_n1-nds_n1%max_m_sz)*sizeof(unsigned int));//this thread should delete all nodes except ther remaining;
+     nds_td0[(*n_th)-1]=(unsigned int*)realloc(nds_td0[(*n_th)-1],(nds_n1-nds_n1%max_m_sz)*sizeof(unsigned int));//this thread should delete all nodes except ther remaining;
      
      
-     for(unsigned int i=0;i<n_th;i++){
+     for(unsigned int i=0;i<(*n_th);i++){
           unsigned int l_idx=i*max_m_sz, r_idx=((i+1)*max_m_sz<=nds_n1)?(i+1)*max_m_sz:nds_n1;
           unsigned int j=0;
           for(;j<l_idx;j++){
@@ -276,6 +278,7 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
           }
           
           mode2_f(&((*rw0)[i]),&(rw[i]),&((*cl0)[i]),&(cl[i]),&((*vl0)[i]),&(vl[i]), &((*len0)[i]),nds_td0[i],(nds_n1-(r_idx-l_idx)),0,0);
+          //mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned int **cl, double **vl0, double **vl, unsigned int *len0, unsigned int *nds_td0, unsigned int nds_n,unsigned char fl_dbg, unsigned int num_iter);
           free(nds_td0[i]);
      
      }
@@ -286,7 +289,7 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
 
 }
 
-void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *col, unsigned long long int* cl_v, double *val, unsigned long long int* vl_v, unsigned int *len,unsigned int **ln_, unsigned int *nds_td, unsigned int *nds_n,double th_nb_koef, unsigned int *nds_td1, unsigned int nds_n1, int mode_dbg, unsigned int num_iter){//unsigned long long int* here acts as generic void*, but stored as plain 64-bit number;
+void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *col, unsigned long long int* cl_v, double *val, unsigned long long int* vl_v, unsigned int *len,unsigned int **ln_, unsigned int *nds_td, unsigned int *nds_n,double th_nb_koef, unsigned int *nds_td1, unsigned int nds_n1, unsigned int* n_th,unsigned int max_m_sz, int mode_dbg, unsigned int num_iter){//unsigned long long int* here acts as generic void*, but stored as plain 64-bit number;
 	enum debug {mode1,mode2};
 	unsigned int*** rw_=(unsigned int***) rw_v; unsigned int*** cl_=(unsigned int***) cl_v; double*** vl_=(double***) vl_v;
      unsigned int *nds_td0=(unsigned int*)malloc((*nds_n)*sizeof(unsigned int)); //with more nodes deleted, graph becomes more connected, so less indipendent (that are not neighboues), hence initial memory allocation here should suffice;
@@ -300,13 +303,13 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
      
      }
      
-     
-	unsigned int* rw=NULL; unsigned int* cl=NULL;double* vl=NULL;
+	
      if(mode_dbg==-1){
+          unsigned int* rw=NULL; unsigned int* cl=NULL;double* vl=NULL;
      	mode1_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td and nds_td0 are of size *nds_n (inout), th_nb_koef is threshold parameter (input), mode1 is time spent in mode 1 (ouput);
      	mode2_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td0,*nds_n,0,0);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td0 is of size *nds_n (input), mode2 is time spent in mode2 (output);
-     	unsigned int max_m_sz=3;
-     	mode3_f(rw_,rw0,cl_,cl0, vl_,vl0,ln_,len0, nds_td1,nds_n1, max_m_sz);
+     	
+     	mode3_f(rw_,rw0,cl_,cl0, vl_,vl0,ln_,len0, nds_td1,nds_n1, max_m_sz,n_th);
      	free(rw0); free(cl0); free(vl0);
      
      }
@@ -318,6 +321,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
      	mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,1,num_iter);
      	(*rw_)[0]=rw0; (*cl_)[0]=cl0; (*vl_)[0]=vl0;
      	(*ln_)[0]=len0;
+     	(*n_th)=1;
      
      }
      else if(mode_dbg==mode2){
@@ -325,9 +329,11 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
 		(*cl_)=(unsigned int**)malloc(1*sizeof(unsigned int*));// (*cl_)[0]=(unsigned int*)malloc(1*sizeof(unsigned int*));
 		(*vl_)=(double**)malloc(1*sizeof(double*));// (*vl_)[0]=(double*)malloc(1*sizeof(double*));
 		(*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
+		mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);
 		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,1,num_iter);
 		(*rw_)[0]=rw0; (*cl_)[0]=cl0; (*vl_)[0]=vl0;
 		(*ln_)[0]=len0;
+		(*n_th)=1;
      
      }
      
@@ -349,6 +355,18 @@ void get_dbg_arr(unsigned long long int *rw_v,unsigned long long int* cl_v, unsi
      (*rw0)=((unsigned int**) (*rw_v))[0];
      (*cl0)=((unsigned int**) (*cl_v))[0];
      (*vl0)=((double**) (*vl_v))[0];
+
+}
+
+void data_free(unsigned long long int *rw_v,unsigned long long int* cl_v, unsigned long long int* vl_v, unsigned int *n_th){
+     unsigned int** rw=(unsigned int**) (*rw_v);
+     unsigned int** cl=(unsigned int**) (*cl_v);
+     double** vl=(double**) (*vl_v);
+     for(unsigned int i=0;i<(*n_th);i++){
+          free(rw[i]); free(cl[i]); free(vl[i]);
+     
+     }
+     free(rw); free(cl); free(vl);
 
 }
 
