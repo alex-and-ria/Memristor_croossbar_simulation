@@ -38,10 +38,10 @@ Gwl=1./100; Gbl=4./100;
 loadlibrary('../libnode_schr.so','../node_schr.h')
 libfunctions('libnode_schr','-full')
 %libfunctionsview libnode_schr
-mode='mode2_2';%mode1_1, mode1_2, mode2_2;
+mode='mode3_0';%mode1_1, mode1_2, mode2_2, mode3_0;
 if(strcmp(mode,'mode1_1')==1)
 %% mode 1, one iteration (4x4 crossbar);
-nds_td=1:2*m*n; nds_td=pune_ntd(nds_td,m,n);
+nds_td=1:2*m*n; [nds_td,~]=pune_ntd(nds_td,m,n);
 
 row_p=libpointer('uint32Ptr',row);
 %rw_vp=libpointer('voidPtr', libpointer('uint32PtrPtr',libpointer('uint32Ptr',0)));
@@ -67,7 +67,7 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      nds_td_p,nds_n,...
      1.,...
      null_uip, 0,...
-     n_th_p,...
+     n_th_p,0,...
      0,1);%dbug mode 1, one iteration;
 
      
@@ -77,7 +77,7 @@ rw_c=libpointer('uint32PtrPtr');
 cl_c=libpointer('uint32PtrPtr');
 vl_c=libpointer('doublePtrPtr');
 calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
-     rw_c,cl_c,vl_c);%store data in rw_c,cl_c,vl_c;
+     rw_c,cl_c,vl_c,0);%store data in rw_c,cl_c,vl_c;
 
 setdatatype(len_pp.Value,'uint32Ptr',1);
 setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value);
@@ -99,12 +99,12 @@ G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
 sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
 max(abs(sol_diff(~isnan(x))))
 
-calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,n_th_p);
+calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
 
 elseif(strcmp(mode,'mode1_2'))
 %% mode 1 two consequative iterations (4x4 crossbar);
 
-nds_td=1:2*m*n; nds_td=pune_ntd(nds_td,m,n);
+nds_td=1:2*m*n; [nds_td,~]=pune_ntd(nds_td,m,n);
 
 row_p=libpointer('uint32Ptr',row);
 rw_vp=libpointer('uint64Ptr',0);%memory for 64-bit address, to keep raw address (for tripple pointer);
@@ -115,6 +115,7 @@ len_pp=libpointer('uint32PtrPtr');
 nds_td_p=libpointer('uint32Ptr',nds_td); nds_n=libpointer('uint32Ptr',length(nds_td)); 
 n_th_p=libpointer('uint32Ptr',0);
 
+null_uip=libpointer('uint32Ptr');
 calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      col_p,cl_vp,...
      val_p,vl_vp,...
@@ -122,14 +123,14 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      nds_td_p,nds_n,...
      1,...%th_nb_koef==1 is to use mode 1 extensively (always if there is more then one indipendent node);
      null_uip, 0,...
-     n_th_p,...
+     n_th_p,0,...
      0,2);%dbug mode 1, two iterations;
 
 rw_c=libpointer('uint32PtrPtr');
 cl_c=libpointer('uint32PtrPtr');
 vl_c=libpointer('doublePtrPtr');
 calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
-     rw_c,cl_c,vl_c);%store data in rw_c,cl_c,vl_c;
+     rw_c,cl_c,vl_c,0);%store data in rw_c,cl_c,vl_c;
 setdatatype(len_pp.Value,'uint32Ptr',1);
 setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value);
 setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value);
@@ -150,12 +151,12 @@ str_tmp=['max(abs(G_one_iter-G_iter)): ' num2str(max(max(abs(G_one_iter-G_iter))
 [Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);
 sol_diff=Lm\Ivec-x;
 str_tmp=['max(abs(sol_diff(~isnan(x)))): ' num2str(max(abs(sol_diff(~isnan(x)))))]; disp(str_tmp);
-calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,n_th_p);
+calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
 
 elseif(strcmp(mode,'mode2_2'))
 %% mode 2 test, 2 iterations (nodes) after full mode 1; 4x4 crossbar;
 
-nds_td=1:2*m*n; nds_td=pune_ntd(nds_td,m,n);
+nds_td=1:2*m*n; [nds_td,~]=pune_ntd(nds_td,m,n);
 
 row_p=libpointer('uint32Ptr',row);
 rw_vp=libpointer('uint64Ptr',0);%memory for 64-bit address, to keep raw address (for tripple pointer);
@@ -174,14 +175,14 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      nds_td_p,nds_n,...
      1,...
      null_uip, 0,...
-     n_th_p,...
+     n_th_p,0,...
      1,2);%dbug mode 2, two iterations;
 
 rw_c=libpointer('uint32PtrPtr');
 cl_c=libpointer('uint32PtrPtr');
 vl_c=libpointer('doublePtrPtr');
 calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
-     rw_c,cl_c,vl_c);%store data in rw_c,cl_c,vl_c;
+     rw_c,cl_c,vl_c,0);%store data in rw_c,cl_c,vl_c;
 setdatatype(len_pp.Value,'uint32Ptr',1);
 setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value);
 setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value);
@@ -203,8 +204,60 @@ str_tmp=['max(abs(G_one_iter-G_iter)): ' num2str(max(max(abs(G_one_iter-G_iter))
 [Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);
 sol_diff=Lm\Ivec-x;
 str_tmp=['max(abs(sol_diff(~isnan(x)))): ' num2str(max(abs(sol_diff(~isnan(x)))))]; disp(str_tmp);
-calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,n_th_p);
+calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
 %%cnds=(get_mesh_cnds(v))*10e3
+elseif(strcmp(mode,'mode3_0'))
+%% mode 3; it has no specific iterations, (4x4) crossbar;
+
+nds_td=1:2*m*n; [nds_td,nds_tgt]=pune_ntd(nds_td,m,n);
+
+row_p=libpointer('uint32Ptr',row);
+rw_vp=libpointer('uint64Ptr',0);%memory for 64-bit address, to keep raw address (for tripple pointer);
+col_p=libpointer('uint32Ptr',col); cl_vp=libpointer('uint64Ptr',0);
+val_p=libpointer('doublePtr',val); vl_vp=libpointer('uint64Ptr',0);
+len_p=libpointer('uint32Ptr',length(row));
+len_pp=libpointer('uint32PtrPtr');
+nds_td_p=libpointer('uint32Ptr',nds_td); nds_n=libpointer('uint32Ptr',length(nds_td)); 
+n_th_p=libpointer('uint32Ptr',0);
+nds_td1_p=libpointer('uint32Ptr',nds_tgt); nds_n1=length(nds_tgt); 
+
+max_m_sz=2;%maximun number of nodes that custom solver can process; 
+calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
+     col_p,cl_vp,...
+     val_p,vl_vp,...
+     len_p,len_pp,...
+     nds_td_p,nds_n,...
+     1,...
+     nds_td1_p, nds_n1,...
+     n_th_p,max_m_sz,...
+     -1,0);%dbug mode 3, it is the mode that gives ouput;
+
+setdatatype(len_pp.Value,'uint32Ptr',n_th_p.Value);
+
+[Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);
+for(ii=0:(n_th_p.Value-1))
+     rw_c=libpointer('uint32PtrPtr');
+     cl_c=libpointer('uint32PtrPtr');
+     vl_c=libpointer('doublePtrPtr');
+     calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
+          rw_c,cl_c,vl_c,ii);%store data in rw_c,cl_c,vl_c;
+     setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value(ii+1));
+     setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value(ii+1));
+     setdatatype(vl_c.Value,'doublePtr',len_pp.Value(ii+1));
+     
+     G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
+     figure(2); spy(G_iter);
+     [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
+     [L,U,P]=lu(G_m); y=L\(P*Ivec0); x=U\y;
+     sol_diff=Lm\Ivec-x;
+     abs(sol_diff(~isnan(x)))
+     str_tmp=['max(abs(sol_diff(~isnan(x)))): ' num2str(max(abs(sol_diff(~isnan(x)))))]; disp(str_tmp);
+
+     
+     
+end
+calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
+
 
 end
 q=33;
@@ -296,7 +349,7 @@ function [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,fl_sym)
 
 end
 
-function pruned_nds=pune_ntd(nds_td,m,n)
+function [pruned_nds,nds_tgt]=pune_ntd(nds_td,m,n)
      n_nd(0,0,0,n);
      nds_tgt=zeros(1,n);
      for jj=1:n

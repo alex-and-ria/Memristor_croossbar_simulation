@@ -262,7 +262,7 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
           
           }
      }
-     nds_td0[(*n_th)-1]=(unsigned int*)realloc(nds_td0[(*n_th)-1],(nds_n1-nds_n1%max_m_sz)*sizeof(unsigned int));//this thread should delete all nodes except ther remaining;
+     if(nds_n1%max_m_sz!=0) {nds_td0[(*n_th)-1]=(unsigned int*)realloc(nds_td0[(*n_th)-1],(nds_n1-nds_n1%max_m_sz)*sizeof(unsigned int));}//this thread should delete all nodes except ther remaining;
      
      
      for(unsigned int i=0;i<(*n_th);i++){
@@ -284,7 +284,7 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
      }
      
      free(cl); free(rw); free(vl);
-     free(*nds_td0);
+     free(nds_td0);
      
 
 }
@@ -309,7 +309,8 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
      	mode1_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td and nds_td0 are of size *nds_n (inout), th_nb_koef is threshold parameter (input), mode1 is time spent in mode 1 (ouput);
      	mode2_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td0,*nds_n,0,0);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td0 is of size *nds_n (input), mode2 is time spent in mode2 (output);
      	
-     	mode3_f(rw_,rw0,cl_,cl0, vl_,vl0,ln_,len0, nds_td1,nds_n1, max_m_sz,n_th);
+     	mode3_f(rw_,rw0,cl_,cl0, vl_,vl0,ln_,len0, nds_td1,nds_n1, max_m_sz,n_th);//input is in rw0,cl0,vl0,len0,nds_td1, nds_n1,max_m_sz, inputs are not modified here; the rest of the parameters are outputs; n_th is a number of threads; rw_,cl_, and vl_ should reutrn *n_th arrays, each containing correspoinding rows,cols, and vals of corresponding matrixes; ln_ should return n_th sizes of resulting rw_,cl_, and vl_ arrays;
+     	//mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsigned int *cl00, double ***vl0, double *vl00, unsigned int **len0,unsigned int ln, unsigned int *nds_td1, unsigned int nds_n1, unsigned int max_m_sz, unsigned int* n_th)
      	free(rw0); free(cl0); free(vl0);
      
      }
@@ -351,14 +352,15 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
 
 }
 
-void get_dbg_arr(unsigned long long int *rw_v,unsigned long long int* cl_v, unsigned long long int* vl_v, unsigned int** rw0, unsigned int** cl0, double **vl0){
-     (*rw0)=((unsigned int**) (*rw_v))[0];
-     (*cl0)=((unsigned int**) (*cl_v))[0];
-     (*vl0)=((double**) (*vl_v))[0];
+void get_dbg_arr(unsigned long long int *rw_v,unsigned long long int* cl_v, unsigned long long int* vl_v, unsigned int** rw0, unsigned int** cl0, double **vl0, unsigned int iter){
+     (*rw0)=((unsigned int**) (*rw_v))[iter];
+     (*cl0)=((unsigned int**) (*cl_v))[iter];
+     (*vl0)=((double**) (*vl_v))[iter];
 
 }
 
-void data_free(unsigned long long int *rw_v,unsigned long long int* cl_v, unsigned long long int* vl_v, unsigned int *n_th){
+
+void data_free(unsigned long long int *rw_v,unsigned long long int* cl_v, unsigned long long int* vl_v, unsigned int **ln,unsigned int *n_th){
      unsigned int** rw=(unsigned int**) (*rw_v);
      unsigned int** cl=(unsigned int**) (*cl_v);
      double** vl=(double**) (*vl_v);
@@ -367,6 +369,7 @@ void data_free(unsigned long long int *rw_v,unsigned long long int* cl_v, unsign
      
      }
      free(rw); free(cl); free(vl);
+     free(*ln);
 
 }
 
