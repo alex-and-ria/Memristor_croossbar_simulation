@@ -30,7 +30,7 @@
 
 
 
-m=4; n=4;batch_size=1;
+m=8; n=8;batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
@@ -221,7 +221,7 @@ nds_td_p=libpointer('uint32Ptr',nds_td); nds_n=libpointer('uint32Ptr',length(nds
 n_th_p=libpointer('uint32Ptr',0);
 nds_td1_p=libpointer('uint32Ptr',nds_tgt); nds_n1=length(nds_tgt); 
 
-max_m_sz=2;%maximun number of nodes that custom solver can process; 
+max_m_sz=5;%maximun number of nodes that custom solver can process; 
 calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      col_p,cl_vp,...
      val_p,vl_vp,...
