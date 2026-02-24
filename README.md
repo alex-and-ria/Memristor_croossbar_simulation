@@ -77,7 +77,7 @@ Node deltation is performed using star mesh transform [Star-Mesh transformations
 There are 3 modes for the C implementation:
 1. Mode 1. Funciton is `mode1_f`. During this mode graph level parallelism is utilized. The function `node_analyzer()` analyzes graph structure of the adjacency matrix (columns and rows that contain nonzero values) and updates `nds_td` array (of nodes to delete) with nonzero entries for nonneighbours (so these entris are safe to delete in parrallel). Then resulting subgrapsh are merged together, then reult merged with the remaining parts of the original graph. Mode 1 has parameter `th_nb_koef`. This parameter allows to transit to mode 2 earlier, even if there are still some indipendent nodes that potentially could be deleted in mode 1. If this parameter is `1.`, than all graph level parallelizm is utilized (deletion continuous is mode 1 untill all nodes are neighbours). Then mode 2 starts.
 2. Mode 2. Funciton is `mode2_f`. During this mode nodes are deleted sequentially, and star-mesh transform operation parallelism (during node deletion calculation of resulting subgraph does not depend on order of neighbour selection) is utilized. After mode 2 all nodes in `nds_td` are deleted. Transition to mode 3 is conditional. If `max_m_sz` (maximum number of nodes that the underlying solver can process (or equivalently the number of equation in the resulting matrix to solve)) is greater of equal to $n$ (the number of columns), further processing is not needed (all node voltages can be solved for in one thread). Howvever, if it is smaller, mode 3 starts.
-3. Mode 3. Function is `mode3_f`. This mode reduces the resulting matrix to solve size (for underlying solver), but since all node voltages on the bit lines at $m^{th}$ row are still needs to be calculated, more than one matrix need to be formed. Then number of threads (or, equivalently, number of matrixes to solve) is returned by `n_th` parameter, and is calculated as $\lceil n/max\_m\_sz \rceil$. To form each matrix, mode 2 is used (since at this point graph had undergo mode 1 and mode 2 before, there is high likelihood that every node is connected, or at lease majority of them, hence, running mode 1 before mode 2 in mode 3, most likely will be ineficient). Mode 2 called from mode 3 reduces grapth further, and keeps in ther resulting matrixes subsets of nodes that need to be solved for. Hence, for underlying solver, these (indipendent) matrixes can be solved in parallel to get corresponding subsets of node values.
+3. Mode 3. Function is `mode3_f`. This mode reduces the resulting matrix to solve size (for underlying solver), but since all node voltages on the bit lines at $m^{th}$ row are still needs to be calculated, more than one matrix need to be formed. Then number of threads (or, equivalently, number of matrixes to solve) is returned by `n_th` parameter, and is calculated as $\lceil n/max\_{m\_sz} \rceil$. To form each matrix, mode 2 is used (since at this point graph had undergo mode 1 and mode 2 before, there is high likelihood that every node is connected, or at lease majority of them, hence, running mode 1 before mode 2 in mode 3, most likely will be ineficient). Mode 2 called from mode 3 reduces grapth further, and keeps in ther resulting matrixes subsets of nodes that need to be solved for. Hence, for underlying solver, these (indipendent) matrixes can be solved in parallel to get corresponding subsets of node values.
 
 # Features
 The shared library writen in C is currently developed to support following features: interactive mode and offline mode.
@@ -129,7 +129,7 @@ Accuracy testing-->
 <!-- up to here -->
 #### Nodal analysis
 <!--To check for correctness-->
-
+<!--
 When including both memristors and a wire loss resistor between each pair of elements on the WLs and BLs, the circuit contains $2 \times m \times n$ voltage nodes. The conductances of the resistors may be stored in a symmetric $2 \times m \times n$ by $2 \times m \times n$ matrix $\boldsymbol{G}$. The currents flowing in each node can be stored in a $2 \times m \times n$ vector $I$ (all but $n$ of which are zero). The vector of $2 \times n \times m$ node voltages, $V$ can be computed by solving the equation $\boldsymbol{G}V=I$. For constructing the matrix, assume the following notation:
 
 \begin{enumerate}
@@ -194,7 +194,7 @@ Nodes corresponding to internal columns ($1<j<n$) and internal rows ($1<i<m$) ca
      V_{BL(i,j)}\times (2\times G_{BL}+G_{(i,j)})+V_{BL(i+1,j)}\times (-G_{BL})+\\+V_{BL(i-1,j)}\times (-G_{BL})+V_{WL(i,j)}\times (-G_{(i,j)});\\ for\ 1<i<m,\ 1<j<m\label{eq:current3}
 \end{multline}
 
-
+-->
 
 
 
