@@ -207,7 +207,7 @@ str_tmp=['max(abs(sol_diff(~isnan(x)))): ' num2str(max(abs(sol_diff(~isnan(x))))
 calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
 %%cnds=(get_mesh_cnds(v))*10e3
 elseif(strcmp(mode,'mode3_0'))
-%% mode 3; it has no specific iterations, (4x4) crossbar;
+%% mode 3; it has no specific iterations;
 
 nds_td=1:2*m*n; [nds_td,nds_tgt]=pune_ntd(nds_td,m,n);
 

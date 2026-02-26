@@ -31,14 +31,15 @@
 
 
 log*
-.*csv
+*.csv
+*.ods
 *.o
 dts*
 *.asv
 *.so
-
+.nfs*
 /tst
-
+tst_tmp*
 
 
 

@@ -35,7 +35,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "omp.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 
 
@@ -137,7 +139,11 @@ void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsig
      unsigned int* rw_buff1=(unsigned int*)malloc(mesh_bdrs[*nds_n]*sizeof(unsigned int));
      unsigned int* cl_buff1=(unsigned int*)malloc(mesh_bdrs[*nds_n]*sizeof(unsigned int));
      double* vl_buff1=(double*)malloc(mesh_bdrs[*nds_n]*sizeof(double));
-     //#pragma omp parallel for num_threads((*nds_n)<100?(*nds_n):100)
+     
+     #ifdef _OPENMP
+          unsigned int num_threads_val=((*nds_n)<(unsigned int) omp_get_max_active_levels())?(*nds_n):((unsigned int)omp_get_max_active_levels());
+     #endif
+     #pragma omp parallel for num_threads(num_threads_val)
      for(unsigned int i=0;i<*nds_n;i++){
           cnds_sum[i]=0;
           for(unsigned int j=idx_r[2*i];j<idx_r[2*i+1];j++){

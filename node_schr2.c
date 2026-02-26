@@ -122,7 +122,7 @@ void mode1_f(unsigned int **rw0,unsigned int** rw, unsigned int **cl0,unsigned i
 
 
 
-void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned int **cl, double **vl0, double **vl, unsigned int *len0, unsigned int *nds_td0, unsigned int nds_n,unsigned char fl_dbg, unsigned int num_iter){
+void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned int **cl, double **vl0, double **vl, unsigned int *len0, unsigned int *nds_td0, unsigned int nds_n,unsigned char fl_dbg, unsigned int num_iter,unsigned char fl_parallel){
      unsigned int *tmp_p_ui; double *tmp_p_d;
      unsigned int* rw_msh=(unsigned int*)malloc(((*len0)*((*len0)-1))*sizeof(unsigned int));//allocate space for maximum number of new edges (if all nodes were connected); potentially can reallocate each time for (j1-j0)*(j1-j0-1) each iteration for memory usage optimization;
      unsigned int* cl_msh=(unsigned int*)malloc(((*len0)*((*len0)-1))*sizeof(unsigned int));
@@ -145,7 +145,10 @@ void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned 
           j1=i;//index boundearies for current node to delete;
           
           ////////////////
-          //parallel
+          #ifdef _OPENMP
+               unsigned int num_threads_val=((j1-1-j0)<(unsigned int)omp_get_max_active_levels())?(j1-1-j0):(unsigned int) omp_get_max_active_levels();
+          #endif
+          #pragma omp parallel for num_threads(num_threads_val) lastprivate(cnt_curr) if(fl_parallel==1)
           for(unsigned int kk=j0;kk<j1-1;kk++){
                cnt_curr=0;
                
@@ -247,8 +250,11 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
      double **vl=(double**)malloc((*n_th)*sizeof(double*));
      (*len0)=(unsigned int*)malloc((*n_th)*sizeof(unsigned int));
 
-     
-     
+     #ifdef _OPENMP
+          unsigned int num_threads_val=((*n_th)<(unsigned int)omp_get_max_active_levels())?(*n_th):(unsigned int)omp_get_max_active_levels();
+     #endif
+     #pragma omp parallel for num_threads(num_threads_val)
+     //parallel;
      for(unsigned int i=0;i<(*n_th);i++){
           (*len0)[i]=ln;
           (*cl0)[i]=(unsigned int*)malloc((*len0)[i]*sizeof(unsigned int));
@@ -261,11 +267,11 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
                (*vl0)[i][j]=vl00[j];
           
           }
-     }
+     /*}NOTE: merged to loops together for openmp efficiency;
      if(nds_n1%max_m_sz!=0) {nds_td0[(*n_th)-1]=(unsigned int*)realloc(nds_td0[(*n_th)-1],(nds_n1-nds_n1%max_m_sz)*sizeof(unsigned int));}//this thread should delete all nodes except ther remaining;
      
-     
-     for(unsigned int i=0;i<(*n_th);i++){
+     //parallel;
+     for(unsigned int i=0;i<(*n_th);i++){*/
           unsigned int l_idx=i*max_m_sz, r_idx=((i+1)*max_m_sz<=nds_n1)?(i+1)*max_m_sz:nds_n1;
           unsigned int j=0;
           for(;j<l_idx;j++){
@@ -276,8 +282,8 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
                nds_td0[i][j-(r_idx-l_idx)]=nds_td1[j];
           
           }
-          
-          mode2_f(&((*rw0)[i]),&(rw[i]),&((*cl0)[i]),&(cl[i]),&((*vl0)[i]),&(vl[i]), &((*len0)[i]),nds_td0[i],(nds_n1-(r_idx-l_idx)),0,0);
+          //after mode1 the number of indipendent nodes reduced, after mode2 graph become even denser, so at this point mostly one by one node deletion shoud be performed;
+          mode2_f(&((*rw0)[i]),&(rw[i]),&((*cl0)[i]),&(cl[i]),&((*vl0)[i]),&(vl[i]), &((*len0)[i]),nds_td0[i],(nds_n1-(r_idx-l_idx)),0,0,0);
           //mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned int **cl, double **vl0, double **vl, unsigned int *len0, unsigned int *nds_td0, unsigned int nds_n,unsigned char fl_dbg, unsigned int num_iter);
           free(nds_td0[i]);
      
@@ -344,7 +350,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
 		(*vl_)=(double**)malloc(1*sizeof(double*));// (*vl_)[0]=(double*)malloc(1*sizeof(double*));
 		(*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
 		mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);
-		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,1,num_iter);
+		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,1,num_iter,1);
 		(*rw_)[0]=rw0; (*cl_)[0]=cl0; (*vl_)[0]=vl0;
 		(*ln_)[0]=len0;
 		(*n_th)=1;
