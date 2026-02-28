@@ -409,7 +409,6 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
      fprintf(fp,",%llu",total_dt+mode1_dt+mode2_dt+mode3_dt);
      fclose(fp);
      
-     
     
      
      free(nds_td0);
