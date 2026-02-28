@@ -29,7 +29,7 @@
 
 
 
-pwrs=8;
+pwrs=2:8;
 batch_size=1;
 for m=2.^pwrs
      n=m;
