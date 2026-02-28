@@ -93,7 +93,8 @@ This mode is designed is designed to prerecord lists for mode 1 and mode 2 to sk
 ### Offline mode
 If node deletion should be done for the graph that was previously processed by record mode (say, crossbar of some fixed size), one can provide values of this graph and file name of output of record mode on graph of identicial strucutre (crosbar of same size). That should speed up algorithm by reducing necessity for the merge part.
 ### Debug options
-There are available debug options to debug modes separately.
+There are available debug options to debug modes separately.  
+Also available brances that are decicated specifically to measure different timing characteristics.
 ### Note: batch processing
 The caller routine (for exmaple, Matlab) can sovle equations for the same matrixes but different input vectors (righ-hand-sides of equation after transromation of adjacency matrixes to laplacians (for example, by using `adj_to_lapl`) suitable to run solver). For different input vectors one can run functions in shared library to get outpus adjacency matrixes once, and then use these adjacency matrixes for different input vectores.
 
