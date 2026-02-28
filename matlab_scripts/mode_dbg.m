@@ -30,15 +30,27 @@
 
 
 
-m=8; n=8;batch_size=1;
+f_nm='mem_dt.csv';
+f_id=fopen(f_nm,'w');
+fwrite(f_id,newline);%for some reason to properly open .csv, need prepend newline;
+th_koef=0.75;
+fwrite(f_id,'mxn,mode1,mode2,mode3,tot_mem,tot_exec,,th_koef=,');
+fwrite(f_id,num2str(th_koef));fclose(f_id);
+
+loadlibrary('../libnode_schr.so','../node_schr.h')
+libfunctions('libnode_schr','-full')
+pwrs=2:8;
+batch_size=1;
+for m=2.^pwrs
+     n=m;
+%m=5; n=5; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
 
-loadlibrary('../libnode_schr.so','../node_schr.h')
-libfunctions('libnode_schr','-full')
+
 %libfunctionsview libnode_schr
-mode='mode3_0';%mode1_1, mode1_2, mode2_2, mode3_0;
+mode='tst';%mode1_1, mode1_2, mode2_2, mode3_0;
 if(strcmp(mode,'mode1_1')==1)
 %% mode 1, one iteration (4x4 crossbar);
 nds_td=1:2*m*n; [nds_td,~]=pune_ntd(nds_td,m,n);
@@ -250,18 +262,57 @@ for(ii=0:(n_th_p.Value-1))
      [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
      [L,U,P]=lu(G_m); y=L\(P*Ivec0); x=U\y;
      sol_diff=Lm\Ivec-x;
-     abs(sol_diff(~isnan(x)))
+     abs(sol_diff(~isnan(x)));
      str_tmp=['max(abs(sol_diff(~isnan(x)))): ' num2str(max(abs(sol_diff(~isnan(x)))))]; disp(str_tmp);
 
      
      
 end
 calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
+elseif(strcmp(mode,'tst'))
+%% tst dynamic memory allocation timing testing;
 
+nds_td=1:2*m*n; [nds_td,nds_tgt]=pune_ntd(nds_td,m,n);
 
+row_p=libpointer('uint32Ptr',row);
+rw_vp=libpointer('uint64Ptr',0);%memory for 64-bit address, to keep raw address (for tripple pointer);
+col_p=libpointer('uint32Ptr',col); cl_vp=libpointer('uint64Ptr',0);
+val_p=libpointer('doublePtr',val); vl_vp=libpointer('uint64Ptr',0);
+len_p=libpointer('uint32Ptr',length(row));
+len_pp=libpointer('uint32PtrPtr');
+nds_td_p=libpointer('uint32Ptr',nds_td); nds_n=libpointer('uint32Ptr',length(nds_td)); 
+n_th_p=libpointer('uint32Ptr',0);
+nds_td1_p=libpointer('uint32Ptr',nds_tgt); nds_n1=length(nds_tgt); 
+
+max_m_sz=8;%maximun number of nodes that custom solver can process; 
+
+str_mxn=sprintf('%ux%u',m,n);
+f_id=fopen(f_nm,'a');fwrite(f_id,newline); fwrite(f_id,str_mxn); fclose(f_id);
+
+tic()
+calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
+     col_p,cl_vp,...
+     val_p,vl_vp,...
+     len_p,len_pp,...
+     nds_td_p,nds_n,...
+     th_koef,...
+     nds_td1_p, nds_n1,...
+     n_th_p,max_m_sz,...
+     -1,0,f_nm);%dbug mode 3, it is the mode that gives ouput;
+tot_dt_call=toc()*10e9;
+
+calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
+
+f_id=fopen(f_nm,'a');
+fwrite(f_id,','); fwrite(f_id,num2str(tot_dt_call));
+fclose(f_id);
+
+end
 end
 q=33;
 unloadlibrary libnode_schr
+
+
 
 function G_adj=adj_m_w(Cnds,Gwl,Gbl)
      %node numberring is as n_nd puts them; then nodes with soudetrces follow,

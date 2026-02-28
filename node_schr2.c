@@ -70,7 +70,7 @@ void node_analyzer(unsigned int* row, unsigned int *col, unsigned int *len, unsi
 }
 
 
-void mode1_f(unsigned int **rw0,unsigned int** rw, unsigned int **cl0,unsigned int** cl, double **vl0, double** vl, unsigned int *len0, unsigned int *nds_td, unsigned int *nds_n,unsigned int **nds_td0,double th_nb_koef,unsigned char fl_dbg, unsigned int num_iter){
+void mode1_f(unsigned int **rw0,unsigned int** rw, unsigned int **cl0,unsigned int** cl, double **vl0, double** vl, unsigned int *len0, unsigned int *nds_td, unsigned int *nds_n,unsigned int **nds_td0,double th_nb_koef,unsigned char fl_dbg, unsigned int num_iter, long long unsigned int* dt_sum){
      double nb_koef=0; unsigned int n_indp=0;
      for(unsigned int i=0;i<*nds_n;i++){
           (*nds_td0)[i]=nds_td[i];
@@ -98,7 +98,7 @@ void mode1_f(unsigned int **rw0,unsigned int** rw, unsigned int **cl0,unsigned i
           }
           //at this point nds_td should contain list of nodes that are not neighbours, and, hece, safe to delete;
           *nds_n=nds_n_nz;
-          star_mesh_base(*rw0,rw,*cl0,cl,*vl0,vl,len0,&ln,(*nds_td0),nds_n);
+          star_mesh_base(*rw0,rw,*cl0,cl,*vl0,vl,len0,&ln,(*nds_td0),nds_n,dt_sum);
           
           
           tmp_p_ui=(*cl); (*cl)=(*cl0); (*cl0)=tmp_p_ui; free(*cl);
@@ -122,11 +122,17 @@ void mode1_f(unsigned int **rw0,unsigned int** rw, unsigned int **cl0,unsigned i
 
 
 
-void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned int **cl, double **vl0, double **vl, unsigned int *len0, unsigned int *nds_td0, unsigned int nds_n,unsigned char fl_dbg, unsigned int num_iter,unsigned char fl_parallel){
+void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned int **cl, double **vl0, double **vl, unsigned int *len0, unsigned int *nds_td0, unsigned int nds_n,unsigned char fl_dbg, unsigned int num_iter,unsigned char fl_parallel,long long unsigned int* dt_sum){
+     struct timespec curr_time; long long unsigned int tick;
      unsigned int *tmp_p_ui; double *tmp_p_d;
+     
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;//small time overhead for calculation tick1 value from curr_time;
      unsigned int* rw_msh=(unsigned int*)malloc(((*len0)*((*len0)-1))*sizeof(unsigned int));//allocate space for maximum number of new edges (if all nodes were connected); potentially can reallocate each time for (j1-j0)*(j1-j0-1) each iteration for memory usage optimization;
      unsigned int* cl_msh=(unsigned int*)malloc(((*len0)*((*len0)-1))*sizeof(unsigned int));
      double* vl_msh=(double*)malloc(((*len0)*((*len0)-1))*sizeof(double));
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     
      double cnds_sum=0; unsigned int cnt_curr=0;
      unsigned int cnt_m=0; unsigned int iter_cnt=0;
      
@@ -172,9 +178,14 @@ void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned 
           
           cnt_curr++;
           unsigned int k0=0, k1=0; cnt_m=0;
+          
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           (*rw)=(unsigned int*)malloc(((j1-j0)*(j1-j0-1)+(*len0))*sizeof(unsigned int));//allocate space for number of new edges in the resulting (after node delteion) mesh and all the remaining nodes;
           (*cl)=(unsigned int*)malloc(((j1-j0)*(j1-j0-1)+(*len0))*sizeof(unsigned int));
           (*vl)=(double*)malloc(((j1-j0)*(j1-j0-1)+(*len0))*sizeof(double));
+          clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+          
           for(;k0<*len0 && k1<cnt_curr;){
           	if(k0==j0) k0=j1;
           	if((*rw0)[k0]==nds_td0[j]){k0++; continue;}
@@ -227,9 +238,14 @@ void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned 
           tmp_p_ui=(*cl0); (*cl0)=(*cl); free(tmp_p_ui);
           tmp_p_ui=(*rw0); (*rw0)=(*rw); free(tmp_p_ui);
           tmp_p_d=(*vl0); (*vl0)=(*vl); free(tmp_p_d);
+          
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           (*rw0)=(unsigned int*)realloc((*rw0),cnt_m*sizeof(unsigned int));
           (*cl0)=(unsigned int*)realloc((*cl0),cnt_m*sizeof(unsigned int));
           (*vl0)=(double*)realloc((*vl0),cnt_m*sizeof(double));
+          clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+          
           *len0=cnt_m;
      
      
@@ -239,8 +255,11 @@ void mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned 
 
 }
 
-void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsigned int *cl00, double ***vl0, double *vl00, unsigned int **len0,unsigned int ln, unsigned int *nds_td1, unsigned int nds_n1, unsigned int max_m_sz, unsigned int* n_th){
+void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsigned int *cl00, double ***vl0, double *vl00, unsigned int **len0,unsigned int ln, unsigned int *nds_td1, unsigned int nds_n1, unsigned int max_m_sz, unsigned int* n_th,long long unsigned int* dt_sum){
+     struct timespec curr_time; long long unsigned int tick;
      (*n_th)=(nds_n1%max_m_sz==0)?nds_n1/max_m_sz:nds_n1/max_m_sz+1;
+     
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;//small time overhead for calculation tick1 value from curr_time;
      unsigned int **nds_td0=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
      (*cl0)=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
      (*rw0)=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
@@ -249,6 +268,8 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
      unsigned int **rw=(unsigned int**)malloc((*n_th)*sizeof(unsigned int*));
      double **vl=(double**)malloc((*n_th)*sizeof(double*));
      (*len0)=(unsigned int*)malloc((*n_th)*sizeof(unsigned int));
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
 
      #ifdef _OPENMP
           unsigned int num_threads_val=((*n_th)<(unsigned int)omp_get_max_active_levels())?(*n_th):(unsigned int)omp_get_max_active_levels();
@@ -257,10 +278,15 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
      //parallel;
      for(unsigned int i=0;i<(*n_th);i++){
           (*len0)[i]=ln;
+          
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           (*cl0)[i]=(unsigned int*)malloc((*len0)[i]*sizeof(unsigned int));
           (*rw0)[i]=(unsigned int*)malloc((*len0)[i]*sizeof(unsigned int));
           (*vl0)[i]=(double*)malloc((*len0)[i]*sizeof(double));
           nds_td0[i]=(unsigned int*)malloc((nds_n1-max_m_sz)*sizeof(unsigned int));//all threads except the last one will keep max_m_sz nodes (so delete other nodes);
+          clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+
           for(unsigned int j=0;j<(*len0)[i];j++){
                (*cl0)[i][j]=cl00[j];
                (*rw0)[i][j]=rw00[j];
@@ -283,7 +309,7 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
           
           }
           //after mode1 the number of indipendent nodes reduced, after mode2 graph become even denser, so at this point mostly one by one node deletion shoud be performed;
-          mode2_f(&((*rw0)[i]),&(rw[i]),&((*cl0)[i]),&(cl[i]),&((*vl0)[i]),&(vl[i]), &((*len0)[i]),nds_td0[i],(nds_n1-(r_idx-l_idx)),0,0,0);
+          mode2_f(&((*rw0)[i]),&(rw[i]),&((*cl0)[i]),&(cl[i]),&((*vl0)[i]),&(vl[i]), &((*len0)[i]),nds_td0[i],(nds_n1-(r_idx-l_idx)),0,0,0,dt_sum);
           //mode2_f(unsigned int **rw0,unsigned int **rw, unsigned int **cl0, unsigned int **cl, double **vl0, double **vl, unsigned int *len0, unsigned int *nds_td0, unsigned int nds_n,unsigned char fl_dbg, unsigned int num_iter);
           free(nds_td0[i]);
      
@@ -295,38 +321,51 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
 
 }
 
-void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *col, unsigned long long int* cl_v, double *val, unsigned long long int* vl_v, unsigned int *len,unsigned int **ln_, unsigned int *nds_td, unsigned int *nds_n,double th_nb_koef, unsigned int *nds_td1, unsigned int nds_n1, unsigned int* n_th,unsigned int max_m_sz, int mode_dbg, unsigned int num_iter){//unsigned long long int* here acts as generic void*, but stored as plain 64-bit number;
+void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *col, unsigned long long int* cl_v, double *val, unsigned long long int* vl_v, unsigned int *len,unsigned int **ln_, unsigned int *nds_td, unsigned int *nds_n,double th_nb_koef, unsigned int *nds_td1, unsigned int nds_n1, unsigned int* n_th,unsigned int max_m_sz, int mode_dbg, unsigned int num_iter,char* fl_nm){//unsigned long long int* here acts as generic void*, but stored as plain 64-bit number;
+	long long unsigned int mode1_dt=0, mode2_dt=0, mode3_dt=0, total_dt=0;
+	struct timespec curr_time; long long unsigned int tick;
+	
 	enum debug {mode1,mode2};
 	unsigned int*** rw_=(unsigned int***) rw_v; unsigned int*** cl_=(unsigned int***) cl_v; double*** vl_=(double***) vl_v;
-     unsigned int *nds_td0=(unsigned int*)malloc((*nds_n)*sizeof(unsigned int)); //with more nodes deleted, graph becomes more connected, so less indipendent (that are not neighboues), hence initial memory allocation here should suffice;
      unsigned int len0=*len;
      
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;//small time overhead for calculation tick1 value from curr_time;
+     unsigned int *nds_td0=(unsigned int*)malloc((*nds_n)*sizeof(unsigned int)); //with more nodes deleted, graph becomes more connected, so less indipendent (that are not neighboues), hence initial memory allocation here should suffice;
      unsigned int *rw0=(unsigned int*)malloc(len0*sizeof(unsigned int));
      unsigned int *cl0=(unsigned int*)malloc(len0*sizeof(unsigned int));
      double *vl0=(double*)malloc(len0*sizeof(double));
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     total_dt+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     
      for(unsigned int i=0;i<len0;i++){
           cl0[i]=col[i]; rw0[i]=row[i]; vl0[i]=val[i];
      
      }
      
+     FILE* fp=fopen (fl_nm,"ab");
+     
      
      if(mode_dbg==-1 && max_m_sz<nds_n1){
           unsigned int* rw=NULL; unsigned int* cl=NULL;double* vl=NULL;
-     	mode1_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td and nds_td0 are of size *nds_n (inout), th_nb_koef is threshold parameter (input), mode1 is time spent in mode 1 (ouput);
-     	mode2_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td0,*nds_n,0,0);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td0 is of size *nds_n (input), mode2 is time spent in mode2 (output);
+     	mode1_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0,&mode1_dt);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td and nds_td0 are of size *nds_n (inout), th_nb_koef is threshold parameter (input), mode1 is time spent in mode 1 (ouput);
+     	mode2_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td0,*nds_n,0,0,1,&mode2_dt);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td0 is of size *nds_n (input), mode2 is time spent in mode2 (output);
      	
-     	mode3_f(rw_,rw0,cl_,cl0, vl_,vl0,ln_,len0, nds_td1,nds_n1, max_m_sz,n_th);//input is in rw0,cl0,vl0,len0,nds_td1, nds_n1,max_m_sz, inputs are not modified here; the rest of the parameters are outputs; n_th is a number of threads; rw_,cl_, and vl_ should reutrn *n_th arrays, each containing correspoinding rows,cols, and vals of corresponding matrixes; ln_ should return n_th sizes of resulting rw_,cl_, and vl_ arrays;
+     	mode3_f(rw_,rw0,cl_,cl0, vl_,vl0,ln_,len0, nds_td1,nds_n1, max_m_sz,n_th, &mode3_dt);//input is in rw0,cl0,vl0,len0,nds_td1, nds_n1,max_m_sz, inputs are not modified here; the rest of the parameters are outputs; n_th is a number of threads; rw_,cl_, and vl_ should reutrn *n_th arrays, each containing correspoinding rows,cols, and vals of corresponding matrixes; ln_ should return n_th sizes of resulting rw_,cl_, and vl_ arrays;
      	//mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsigned int *cl00, double ***vl0, double *vl00, unsigned int **len0,unsigned int ln, unsigned int *nds_td1, unsigned int nds_n1, unsigned int max_m_sz, unsigned int* n_th)
      	free(rw0); free(cl0); free(vl0);
      
      }
      else if(mode_dbg==-1 && max_m_sz>=nds_n1){
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           (*rw_)=(unsigned int**)malloc(1*sizeof(unsigned int*));// (*rw_)[0]=(unsigned int*)malloc(1*sizeof(unsigned int*));
 		(*cl_)=(unsigned int**)malloc(1*sizeof(unsigned int*));// (*cl_)[0]=(unsigned int*)malloc(1*sizeof(unsigned int*));
 		(*vl_)=(double**)malloc(1*sizeof(double*));// (*vl_)[0]=(double*)malloc(1*sizeof(double*));
 		(*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
-		mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);
-		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,0,0);
+		clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          total_dt+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+          
+		mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0,&mode1_dt);
+		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,0,0,1,&mode2_dt);
 		(*rw_)[0]=rw0; (*cl_)[0]=cl0; (*vl_)[0]=vl0;
 		(*ln_)[0]=len0;
 		(*n_th)=1;
@@ -334,39 +373,46 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
      
      }
      else if(mode_dbg==mode1){
+     	clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      	(*rw_)=(unsigned int**)malloc(1*sizeof(unsigned int*)); //(*rw_)[0]=(unsigned int*)malloc(1*sizeof(unsigned int*));
 		(*cl_)=(unsigned int**)malloc(1*sizeof(unsigned int*)); //(*cl_)[0]=(unsigned int*)malloc(1*sizeof(unsigned int*));
 		(*vl_)=(double**)malloc(1*sizeof(double*)); //(*vl_)[0]=(double*)malloc(1*sizeof(double*));
 		(*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
-     	mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,1,num_iter);
+		clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          total_dt+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     	
+     	mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,1,num_iter,&mode1_dt);
      	(*rw_)[0]=rw0; (*cl_)[0]=cl0; (*vl_)[0]=vl0;
      	(*ln_)[0]=len0;
      	(*n_th)=1;
      
      }
      else if(mode_dbg==mode2){
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      	(*rw_)=(unsigned int**)malloc(1*sizeof(unsigned int*));// (*rw_)[0]=(unsigned int*)malloc(1*sizeof(unsigned int*));
 		(*cl_)=(unsigned int**)malloc(1*sizeof(unsigned int*));// (*cl_)[0]=(unsigned int*)malloc(1*sizeof(unsigned int*));
 		(*vl_)=(double**)malloc(1*sizeof(double*));// (*vl_)[0]=(double*)malloc(1*sizeof(double*));
 		(*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
-		mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);
-		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,1,num_iter,1);
+		clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          total_dt+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+          
+		mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0,&mode1_dt);
+		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,1,num_iter,1,&mode2_dt);
 		(*rw_)[0]=rw0; (*cl_)[0]=cl0; (*vl_)[0]=vl0;
 		(*ln_)[0]=len0;
 		(*n_th)=1;
      
      }
+     fprintf(fp,",%llu",mode1_dt);
+     fprintf(fp,",%llu",mode2_dt);
+     fprintf(fp,",%llu",mode3_dt);
+     fprintf(fp,",%llu",total_dt+mode1_dt+mode2_dt+mode3_dt);
+     fclose(fp);
      
      
-     
-     //(*cl)=cl0; (*rw)=rw0; (*vl)=vl0;
-     //*ln=len0;
     
      
      free(nds_td0);
-
- 
-     //fclose(fp);
 
 
 }

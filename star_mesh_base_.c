@@ -32,6 +32,7 @@
 
                                 
 #include"node_schr.h"
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -41,7 +42,7 @@
 
 
 
-void nds_sprt(unsigned int *col, unsigned int *len, unsigned int** idx_r_td, unsigned int** idx_r_nb, unsigned int *idx_nb_len, unsigned int* nds_td, unsigned int* nds_n){
+void nds_sprt(unsigned int *col, unsigned int *len, unsigned int** idx_r_td, unsigned int** idx_r_nb, unsigned int *idx_nb_len, unsigned int* nds_td, unsigned int* nds_n, long long unsigned int *dt_sum){
      unsigned int curr_col=col[0], cnt_nb=0;
      //unsigned int i=1;
      if(col[0]==nds_td[0]){
@@ -90,20 +91,32 @@ void nds_sprt(unsigned int *col, unsigned int *len, unsigned int** idx_r_td, uns
      
      }
      *idx_nb_len=cnt_nb;
+     
+     
+     struct timespec curr_time; long long unsigned int tick;
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;//small time overhead for calculation tick1 value from curr_time;
      (*idx_r_nb)=(unsigned int*) realloc((*idx_r_nb),(2*cnt_nb)*sizeof(unsigned int));//realloc to free extra allocated memory;
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
 
 } 
 
 
 
 
-void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int *len,unsigned int *ln, unsigned int *nds_td, unsigned int *nds_n){
-     double *cnds_sum; cnds_sum=(double*) malloc((*nds_n)*sizeof(double));
-     unsigned int *idx_r; idx_r=(unsigned int*) malloc(2*(*nds_n)*sizeof(unsigned int));// unsigned int idx_len;//indexes for nodes to delete; will index up to *nds_n; should contain first and next after last index for each node to delete;
+void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int *len,unsigned int *ln, unsigned int *nds_td, unsigned int *nds_n, long long unsigned int* dt_sum){
+     struct timespec curr_time; long long unsigned int tick;
      
-     unsigned int *mesh_bdrs; mesh_bdrs=(unsigned int*) malloc(((*nds_n)+1)*sizeof(unsigned int));
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;//small time overhead for calculation tick1 value from curr_time;
+     double *cnds_sum=(double*) malloc((*nds_n)*sizeof(double));
+     unsigned int *idx_r=(unsigned int*) malloc(2*(*nds_n)*sizeof(unsigned int));// unsigned int idx_len;//indexes for nodes to delete; will index up to *nds_n; should contain first and next after last index for each node to delete;
+     unsigned int *mesh_bdrs=(unsigned int*) malloc(((*nds_n)+1)*sizeof(unsigned int));
      unsigned int* idx_r_nb=(unsigned int*) malloc(2*(*len)*sizeof(unsigned int)); unsigned int idx_len_nb;//indexes for neighbouring and protected nodes;
-     nds_sprt(col, len, &idx_r, &idx_r_nb, &idx_len_nb, nds_td, nds_n);
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     
+     
+     nds_sprt(col, len, &idx_r, &idx_r_nb, &idx_len_nb, nds_td, nds_n,dt_sum);
  //clearing all neighbours that that should be deleted, //(*now just all neighbours) that located after the j==*nds_n-1;
      for(unsigned int i=0; i<idx_len_nb;i++){
           for(unsigned int j=0,kk=idx_r_nb[2*i]; j<*nds_n && kk<idx_r_nb[2*i+1];){
@@ -124,12 +137,18 @@ void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsig
      
      }
      
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      unsigned int* cnt_tmps=(unsigned int*)malloc((*nds_n)*sizeof(unsigned int));
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     
      mesh_bdrs[0]=0;
      for(unsigned int i=0;i<*nds_n;i++){
           mesh_bdrs[i+1]=mesh_bdrs[i]+((idx_r[2*i+1]-idx_r[2*i])*(idx_r[2*i+1]-idx_r[2*i]-1)+0.);//new mesh boundary strats where ends previous one plus mesh size (number of edges); each edge is recorded twice to comply with adjacency matrix requirenments;
           
      }
+     
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      (*rw)=(unsigned int*)malloc((mesh_bdrs[*nds_n]+((*len)-2*(*nds_n)))*sizeof(unsigned int));
      (*cl)=(unsigned int*)malloc((mesh_bdrs[*nds_n]+((*len)-2*(*nds_n)))*sizeof(unsigned int));
      (*vl)=(double*)malloc((mesh_bdrs[*nds_n]+((*len)-2*(*nds_n)))*sizeof(double));
@@ -139,6 +158,8 @@ void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsig
      unsigned int* rw_buff1=(unsigned int*)malloc(mesh_bdrs[*nds_n]*sizeof(unsigned int));
      unsigned int* cl_buff1=(unsigned int*)malloc(mesh_bdrs[*nds_n]*sizeof(unsigned int));
      double* vl_buff1=(double*)malloc(mesh_bdrs[*nds_n]*sizeof(double));
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
      
      #ifdef _OPENMP
           unsigned int num_threads_val=((*nds_n)<(unsigned int) omp_get_max_active_levels())?(*nds_n):((unsigned int)omp_get_max_active_levels());
@@ -169,9 +190,21 @@ void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsig
      }
      ////////////////////////////////////////////////////
      unsigned int curr_i, idx_m0=0, idx_res=0; cnt_tmps[0]=0;
-     struct nds_lst{unsigned int i; struct nds_lst* next;}; struct nds_lst* nds_lst_head=(struct nds_lst*) malloc(1*sizeof(struct nds_lst)); struct nds_lst* nl_prev=nds_lst_head, *nl_curr, *nl_m0; nds_lst_head->i=0; nds_lst_head->next=NULL;
+     struct nds_lst{unsigned int i; struct nds_lst* next;}; 
+     
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+     struct nds_lst* nds_lst_head=(struct nds_lst*) malloc(1*sizeof(struct nds_lst)); 
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     
+     struct nds_lst* nl_prev=nds_lst_head, *nl_curr, *nl_m0; nds_lst_head->i=0; nds_lst_head->next=NULL;
      for(unsigned int i=1;i<*nds_n;i++){
+          
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           nl_curr=(struct nds_lst*) malloc(1*sizeof(struct nds_lst)); nl_curr->i=i; nl_prev->next=nl_curr; nl_prev=nl_curr;
+          clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+          
           cnt_tmps[i]=mesh_bdrs[i];
      }
      nl_curr->next=NULL;
@@ -327,9 +360,14 @@ void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsig
           idx_tmp++; k_tm++;
      
      }//at this point arrays from deletion of the node should be merged with original points;
+     
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      (*rw)=(unsigned int*)realloc((*rw),idx_tmp*sizeof(unsigned int));
      (*cl)=(unsigned int*)realloc((*cl),idx_tmp*sizeof(unsigned int));
      (*vl)=(double*)realloc((*vl),idx_tmp*sizeof(double));
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     *dt_sum+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     
      *ln=idx_tmp;
      
      
