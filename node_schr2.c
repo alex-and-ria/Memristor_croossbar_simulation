@@ -296,7 +296,7 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
 }
 
 void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *col, unsigned long long int* cl_v, double *val, unsigned long long int* vl_v, unsigned int *len,unsigned int **ln_, unsigned int *nds_td, unsigned int *nds_n,double th_nb_koef, unsigned int *nds_td1, unsigned int nds_n1, unsigned int* n_th,unsigned int max_m_sz, int mode_dbg, unsigned int num_iter){//unsigned long long int* here acts as generic void*, but stored as plain 64-bit number;
-	enum debug {mode1,mode2};
+	enum debug {mode1,mode2,mode1_1};
 	unsigned int*** rw_=(unsigned int***) rw_v; unsigned int*** cl_=(unsigned int***) cl_v; double*** vl_=(double***) vl_v;
      unsigned int *nds_td0=(unsigned int*)malloc((*nds_n)*sizeof(unsigned int)); //with more nodes deleted, graph becomes more connected, so less indipendent (that are not neighboues), hence initial memory allocation here should suffice;
      unsigned int len0=*len;
@@ -309,12 +309,11 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
      
      }
      
-     
      if(mode_dbg==-1 && max_m_sz<nds_n1){
           unsigned int* rw=NULL; unsigned int* cl=NULL;double* vl=NULL;
      	mode1_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td and nds_td0 are of size *nds_n (inout), th_nb_koef is threshold parameter (input), mode1 is time spent in mode 1 (ouput);
-     	mode2_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td0,*nds_n,0,0);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td0 is of size *nds_n (input), mode2 is time spent in mode2 (output);
-     	
+     	mode2_f(&rw0,&rw,&cl0,&cl,&vl0,&vl,&len0,nds_td0,*nds_n,0,0,1);//input is rw0,cl0,vl0 of size len0; output is rw0,cl0,vl0, of size len0, (inout parameters), nds_td0 is of size *nds_n (input), mode2 is time spent in mode2 (output);
+     	//unsigned char fl_dbg, unsigned int num_iter,unsigned char fl_parallel)
      	mode3_f(rw_,rw0,cl_,cl0, vl_,vl0,ln_,len0, nds_td1,nds_n1, max_m_sz,n_th);//input is in rw0,cl0,vl0,len0,nds_td1, nds_n1,max_m_sz, inputs are not modified here; the rest of the parameters are outputs; n_th is a number of threads; rw_,cl_, and vl_ should reutrn *n_th arrays, each containing correspoinding rows,cols, and vals of corresponding matrixes; ln_ should return n_th sizes of resulting rw_,cl_, and vl_ arrays;
      	//mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsigned int *cl00, double ***vl0, double *vl00, unsigned int **len0,unsigned int ln, unsigned int *nds_td1, unsigned int nds_n1, unsigned int max_m_sz, unsigned int* n_th)
      	free(rw0); free(cl0); free(vl0);
@@ -326,7 +325,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
 		(*vl_)=(double**)malloc(1*sizeof(double*));// (*vl_)[0]=(double*)malloc(1*sizeof(double*));
 		(*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
 		mode1_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td,nds_n,&nds_td0,th_nb_koef,0,0);
-		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,0,0);
+		mode2_f(&rw0,&((*rw_)[0]),&cl0,&((*cl_)[0]),&vl0,&((*vl_)[0]),&len0,nds_td0,*nds_n,0,0,1);
 		(*rw_)[0]=rw0; (*cl_)[0]=cl0; (*vl_)[0]=vl0;
 		(*ln_)[0]=len0;
 		(*n_th)=1;
@@ -354,6 +353,16 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
 		(*rw_)[0]=rw0; (*cl_)[0]=cl0; (*vl_)[0]=vl0;
 		(*ln_)[0]=len0;
 		(*n_th)=1;
+     
+     }
+     else if(mode_dbg==mode1_1){
+          (*rw_)=(unsigned int**)malloc(1*sizeof(unsigned int*));
+		(*cl_)=(unsigned int**)malloc(1*sizeof(unsigned int*));
+		(*vl_)=(double**)malloc(1*sizeof(double*));
+		(*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
+          mode_1_alg(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,0.,2);
+          (*ln_)[0]=len0;
+          (*n_th)=1;
      
      }
      

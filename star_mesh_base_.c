@@ -350,5 +350,8 @@ void star_mesh_base(unsigned int *row,unsigned int** rw, unsigned int *col,unsig
      
 }
 
+#include"node_schdlr_alg1.c"
 #include"node_schr2.c"
+//#include"node_schdlr_fl.c"
+
 int tst_pnt(unsigned int dim) {return dim;}
