@@ -32,7 +32,7 @@
 
 
 
-m=4; n=4; batch_size=1;
+m=128; n=128; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);

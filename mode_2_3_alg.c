@@ -30,8 +30,7 @@
 
 
 
-void mode_2_alg(node** node_arr,double* edge_arr,unsigned int *nds_td, unsigned int nds_n, node** node_hd_, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl){
-     node* node_hd=(*node_hd_);
+void mode_2_alg(node** node_arr,double* edge_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl,mode_3_param* mode3_inp){
      unsigned int *buff_mrg=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int mrg_cnt;
      node *prev_node, *curr_node;
@@ -177,18 +176,101 @@ void mode_2_alg(node** node_arr,double* edge_arr,unsigned int *nds_td, unsigned 
           
           }
           
+          
      
      }
      else{
-     //TODO mode 3 (recursive);
+          (*(mode3_inp->n_th))=((mode3_inp->tgt_n1)%(mode3_inp->max_m_sz)==0)?(mode3_inp->tgt_n1)/(mode3_inp->max_m_sz):((mode3_inp->tgt_n1)/(mode3_inp->max_m_sz)+1);
+          unsigned int ***rw=mode3_inp->rw; unsigned int ***cl=mode3_inp->cl; double ***vl=mode3_inp->vl;
+          (*rw)=(unsigned int**) malloc((*(mode3_inp->n_th))*sizeof(unsigned int*));
+          (*cl)=(unsigned int**) malloc((*(mode3_inp->n_th))*sizeof(unsigned int*));
+          (*vl)=(double**) malloc((*(mode3_inp->n_th))*sizeof(double*));
+          (*(mode3_inp->ln))=(unsigned int*) malloc((*(mode3_inp->n_th))*sizeof(unsigned int));
+          for(unsigned int i=0;i<(*(mode3_inp->n_th));i++){
+               node** node_arr0=(node**) malloc(max_nds*sizeof(node*));
+               double* edge_arr0=(double*) malloc(max_nds*max_nds*sizeof(double));
+               for(unsigned int j=0;j<max_nds;j++){
+                    node_arr0[j]=NULL;
+                    for(unsigned int k=0;k<max_nds;k++){
+                         edge_arr0[j*max_nds+k]=-1;
+                    
+                    }
+               
+               }
+               curr_node=node_hd;
+               node_arr0[curr_node->num-1]=(node*) malloc(1*sizeof(node));
+               node_arr0[curr_node->num-1]->num=curr_node->num;
+               node_arr0[curr_node->num-1]->n=curr_node->n;
+               node_arr0[curr_node->num-1]->nums=(unsigned int*) malloc((max_nds-1)*sizeof(unsigned int));
+               for(unsigned int j=0;j<curr_node->n;j++){
+                    node_arr0[curr_node->num-1]->nums[j]=curr_node->nums[j];
+                    edge_arr0[(curr_node->num-1)*max_nds+curr_node->nums[j]-1]=edge_arr[(curr_node->num-1)*max_nds+curr_node->nums[j]-1];
+               }
+               prev_node=node_arr0[curr_node->num-1];
+               curr_node=curr_node->next;
+               for(;curr_node!=NULL;curr_node=curr_node->next){
+                    node_arr0[curr_node->num-1]=(node*) malloc(1*sizeof(node));
+                    node_arr0[curr_node->num-1]->num=curr_node->num;
+                    node_arr0[curr_node->num-1]->n=curr_node->n;
+                    node_arr0[curr_node->num-1]->nums=(unsigned int*) malloc((max_nds-1)*sizeof(unsigned int));
+                    for(unsigned int j=0;j<curr_node->n;j++){
+                         node_arr0[curr_node->num-1]->nums[j]=curr_node->nums[j];
+                         edge_arr0[(curr_node->num-1)*max_nds+curr_node->nums[j]-1]=edge_arr[(curr_node->num-1)*max_nds+curr_node->nums[j]-1];
+                    }
+                    prev_node->next=node_arr0[curr_node->num-1];
+                    prev_node=node_arr0[curr_node->num-1];
+               }
+               prev_node->next=NULL;
+               unsigned int *nds_td00; unsigned int nds_n00;
+               
+               
+               
+               if(i<(*(mode3_inp->n_th))-1){
+                    nds_n00=mode3_inp->tgt_n1-mode3_inp->max_m_sz;
+                    nds_td00=(unsigned int*) malloc(nds_n00*sizeof(unsigned int));
+                    for(unsigned int j=0;j<i*(mode3_inp->max_m_sz);j++){
+                         nds_td00[j]=mode3_inp->nds_tgt[j];
+                    
+                    }
+                    for(unsigned int j=(i+1)*(mode3_inp->max_m_sz);j<mode3_inp->tgt_n1;j++){
+                         nds_td00[j-1*(mode3_inp->max_m_sz)]=mode3_inp->nds_tgt[j];
+                    
+                    }
+                    
+               }
+               else{
+                    nds_n00=i*(mode3_inp->max_m_sz);
+                    nds_td00=(unsigned int*) malloc(nds_n00*sizeof(unsigned int));
+                    for(unsigned int j=0;j<i*(mode3_inp->max_m_sz);j++){
+                         nds_td00[j]=mode3_inp->nds_tgt[j];
+                    
+                    }
+                    
+               
+               }
+               node* node_hd0=node_arr0[node_hd->num-1];
+               out_fl=1;
+               mode_2_alg(node_arr0,edge_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL);
+               free(node_arr0); free(edge_arr0);
+               free(nds_td00);
+               
+               
+               
           
+          }
+          for(curr_node=node_hd;curr_node!=NULL;){
+               prev_node=curr_node;
+               curr_node=curr_node->next;
+               free(prev_node->nums);
+               free(prev_node);
+          
+          }
      
      
-     
-     *node_hd_=node_hd;
      
      }
      free(buff_mrg);
      
      
 }
+

@@ -24,7 +24,7 @@ fl_nm=strcat('/share/share0/abc/star_mesh/rw_.h');
 if(f_id<0)
      disp('f_id<0');
 end
-m=4; n=4; batch_size=1;
+m=107; n=107; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
@@ -74,7 +74,7 @@ for ii=2:size(nds_tgt,2)
 end
 fprintf(f_id,"};\n");
 
-fprintf(f_id,"unsigned int nds_n1=%u; unsigned int max_mx_sz=2;\n", size(nds_tgt,2));
+fprintf(f_id,"unsigned int nds_n1=%u; unsigned int max_m_sz=2;\n", size(nds_tgt,2));
 
 fclose(f_id);
 

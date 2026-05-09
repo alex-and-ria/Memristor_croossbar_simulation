@@ -42,9 +42,13 @@ typedef struct node{
      
 } node;
 
+typedef struct{
+     unsigned int ***rw; unsigned int*** cl; double***vl; unsigned int** ln; unsigned int* nds_tgt; unsigned int tgt_n1; unsigned int max_m_sz; unsigned int* n_th;
+} mode_3_param;
+
 #include"mode_2_3_alg.c"
 
-void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl){
+void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp){
      unsigned int max_nds=col[len-1];
      //struct edge;
      /*typedef struct node{
@@ -62,7 +66,7 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      } edge;*/
      node** node_arr=(node**) malloc(max_nds*sizeof(node*));
      //edge** edge_arr=(edge**) malloc(max_nds*max_nds*sizeof(edge*));
-     double* edge_arr=(double*) malloc(max_nds*max_nds*sizeof(double));
+     double* edge_arr=(double*) malloc(max_nds*max_nds*sizeof(double));//this gets overflowed if m>107 (if m>107 && n=m; 2^32-(2*m*n+m+1)*(2*m*n+m+1)*8;
      for(unsigned int i=0;i<max_nds*max_nds;i++){
           edge_arr[i]=-1;
      
@@ -474,7 +478,7 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      }
      else{
           out_fl--;
-          mode_2_alg(node_arr,edge_arr,nds_td2,nds_n2, &node_hd,max_nds,rw,cl,vl,ln,out_fl);
+          mode_2_alg(node_arr,edge_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp);
           //mode_2_alg(node** node_arr,double* edge_arr,unsigned int *nds_td, unsigned int nds_n, node** node_hd_, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl);
           free(nds_td0);
           free(nds_td_rem);

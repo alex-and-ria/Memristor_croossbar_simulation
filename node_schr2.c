@@ -296,16 +296,21 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
 }
 
 void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *col, unsigned long long int* cl_v, double *val, unsigned long long int* vl_v, unsigned int *len,unsigned int **ln_, unsigned int *nds_td, unsigned int *nds_n,double th_nb_koef, unsigned int *nds_td1, unsigned int nds_n1, unsigned int* n_th,unsigned int max_m_sz, int mode_dbg, unsigned int num_iter){//unsigned long long int* here acts as generic void*, but stored as plain 64-bit number;
-	enum debug {mode1,mode2,mode1_1};
+	enum debug {mode1,mode2,mode_1_2_3};
 	unsigned int*** rw_=(unsigned int***) rw_v; unsigned int*** cl_=(unsigned int***) cl_v; double*** vl_=(double***) vl_v;
-     unsigned int *nds_td0=(unsigned int*)malloc((*nds_n)*sizeof(unsigned int)); //with more nodes deleted, graph becomes more connected, so less indipendent (that are not neighboues), hence initial memory allocation here should suffice;
+     unsigned int *nds_td0;
      unsigned int len0=*len;
+     unsigned int *rw0; unsigned int *cl0; double *vl0;
      
-     unsigned int *rw0=(unsigned int*)malloc(len0*sizeof(unsigned int));
-     unsigned int *cl0=(unsigned int*)malloc(len0*sizeof(unsigned int));
-     double *vl0=(double*)malloc(len0*sizeof(double));
-     for(unsigned int i=0;i<len0;i++){
-          cl0[i]=col[i]; rw0[i]=row[i]; vl0[i]=val[i];
+     if(mode_dbg<mode_1_2_3){
+          nds_td0=(unsigned int*)malloc((*nds_n)*sizeof(unsigned int)); //with more nodes deleted, graph becomes more connected, so less indipendent (that are not neighboues), hence initial memory allocation here should suffice;
+          rw0=(unsigned int*)malloc(len0*sizeof(unsigned int));
+          cl0=(unsigned int*)malloc(len0*sizeof(unsigned int));
+          vl0=(double*)malloc(len0*sizeof(double));
+          for(unsigned int i=0;i<len0;i++){
+               cl0[i]=col[i]; rw0[i]=row[i]; vl0[i]=val[i];
+          
+          }
      
      }
      
@@ -355,14 +360,28 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
 		(*n_th)=1;
      
      }
-     else if(mode_dbg==mode1_1){
-          (*rw_)=(unsigned int**)malloc(1*sizeof(unsigned int*));
-		(*cl_)=(unsigned int**)malloc(1*sizeof(unsigned int*));
-		(*vl_)=(double**)malloc(1*sizeof(double*));
-		(*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
-          mode_1_alg(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,0.,2);
-          (*ln_)[0]=len0;
-          (*n_th)=1;
+     else if(mode_dbg==mode_1_2_3){
+          unsigned int out_fl=3;
+          if(max_m_sz>=nds_n1) out_fl=2;
+          if(out_fl<3){
+               (*rw_)=(unsigned int**)malloc(1*sizeof(unsigned int*));
+		     (*cl_)=(unsigned int**)malloc(1*sizeof(unsigned int*));
+		     (*vl_)=(double**)malloc(1*sizeof(double*));
+		     (*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
+               mode_1_alg(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,th_nb_koef,out_fl,NULL);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
+               (*ln_)[0]=len0;
+               (*n_th)=1;
+          
+          }
+          else{
+               mode_3_param mode3_inp;
+               mode3_inp.rw=rw_; mode3_inp.cl=cl_; mode3_inp.vl=vl_; mode3_inp.ln=ln_;
+               mode3_inp.nds_tgt=nds_td1; mode3_inp.tgt_n1=nds_n1;
+               mode3_inp.max_m_sz=max_m_sz; mode3_inp.n_th=n_th;
+               mode_1_alg(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,th_nb_koef,out_fl,&mode3_inp);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
+          
+          }
+          
      
      }
      
@@ -372,7 +391,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
      //*ln=len0;
     
      
-     free(nds_td0);
+     if(mode_dbg<mode_1_2_3) free(nds_td0);
 
  
      //fclose(fp);
