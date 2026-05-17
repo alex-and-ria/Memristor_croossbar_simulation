@@ -41,7 +41,7 @@ dts*
 /tst
 tst_tmp*
 *.txt
-
+*.orig
 
 
 

@@ -50,7 +50,7 @@
 int main(int argc, char**argv){
      unsigned int** rw_; unsigned int** cl_; double** vl_;unsigned int* ln_;
      enum debug {mode1,mode2,mode_1_2_3}; enum debug dbg;
-     unsigned int n_th, max_m_sz=50;
+     unsigned int n_th;//, max_m_sz=50;
      if(argc==3 && strcmp(argv[1],"debug_mode1")==0){
      	dbg=mode1;
      	dense_rdct(row,(unsigned long long int*)(&rw_),col,(unsigned long long int*)(&cl_),val,(unsigned long long int*)(&vl_), &len1,&ln_, nds_td, &nds_n,1.,nds_td1,nds_n1, &n_th,max_m_sz,dbg,atoi(argv[2]));

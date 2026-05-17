@@ -50,6 +50,8 @@ typedef struct{
 
 void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp){
      unsigned int max_nds=col[len-1];
+     struct timespec curr_time; long long unsigned int tick,dt_time, nb_time=0, transf_time=0, frr_time=0;
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      //struct edge;
      /*typedef struct node{
           unsigned int num;
@@ -138,6 +140,9 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      
      }
      /////////////////////////////////////at this point edges should be set up too;
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     printf("\nmode1:\nset up time: %llu",dt_time);
      
      
      
@@ -153,6 +158,7 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      //unsigned int dbg_cnt=0,dbg_max=4;
      double curr_thr_koef=0;
      while(1/*dbg_cnt<dbg_max*/){
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      for(unsigned int i=0;i<max_nds;i++){
           nds_td0[i]=0; nds_td_rem[i]=0;
      }
@@ -223,10 +229,12 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      
      }
      /////////////////////////////////////////at this point nds_td0 (nodes to delete) and nds_td_rem (nodes left, delete on next iteration) should set up;
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     nb_time+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     //printf("\nneighbour search time: %llu",dt_time);
      
      
-     
-     
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      unsigned int edge_idx0=0,edge_idx1=0,edge_idx2=0,n1,n2;
      unsigned int bf_nm_cnt=0,bf_mg_cnt=0;
      unsigned int *ui_ptr;
@@ -325,9 +333,11 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      
      }
      /////////////////////////////////////////////////////////////////////at this point star mesh transform should be completed for this iteration
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     transf_time+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     //printf("\nstar_to_mesh: %llu",dt_time);
      
-     
-     
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      node* prev_node=NULL;curr_node=node_hd;
      for(unsigned int i=0; i<nds_n0 && curr_node!=NULL;){
           if(curr_node->num==nds_td0[i]){
@@ -434,6 +444,9 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      
      ui_ptr=nds_td2; nds_td2=nds_td_rem; nds_td_rem=ui_ptr;
      nds_n2=nds_n_rem; nds_n0=0; nds_n_rem=0;
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     frr_time+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     //printf("\nclean up time: %llu",dt_time);
      //dbg_cnt++;
      }
      
@@ -494,7 +507,10 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      free(nds_td2);
      free(buff_num);
      free(buff_mrg);
-     
+     printf("\nnodes processed: %u",nds_n-nds_n2);
+     printf("\nneighbour search time: %llu",nb_time);
+     printf("\nstar_to_mesh: %llu",transf_time);
+     printf("\nclean up time: %llu",frr_time);
      
 
 }

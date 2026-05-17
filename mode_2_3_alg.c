@@ -29,12 +29,15 @@
 
 
 
-
+#include <time.h>
 void mode_2_alg(node** node_arr,double* edge_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl,mode_3_param* mode3_inp){
+     struct timespec curr_time; long long unsigned int tick,dt_time;
+     printf("\nmode2");
      unsigned int *buff_mrg=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int mrg_cnt;
      node *prev_node, *curr_node;
      unsigned int *uip_tmp;
+     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      for(unsigned int i=0;i<nds_n;i++){
           double sum=0;
           unsigned int n0=nds_td[i],n1,n2;
@@ -146,6 +149,13 @@ void mode_2_alg(node** node_arr,double* edge_arr,unsigned int *nds_td, unsigned 
           free(curr_node);
           
      }
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     if(out_fl==1){
+          printf("\nnodes processed: %u",nds_n);
+          printf("\ntotal time: %llu",dt_time);
+     
+     }
      if(out_fl==1){
           *ln=0;
           for(curr_node=node_hd;curr_node!=NULL;curr_node=curr_node->next){
@@ -180,6 +190,7 @@ void mode_2_alg(node** node_arr,double* edge_arr,unsigned int *nds_td, unsigned 
      
      }
      else{
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           (*(mode3_inp->n_th))=((mode3_inp->tgt_n1)%(mode3_inp->max_m_sz)==0)?(mode3_inp->tgt_n1)/(mode3_inp->max_m_sz):((mode3_inp->tgt_n1)/(mode3_inp->max_m_sz)+1);
           unsigned int ***rw=mode3_inp->rw; unsigned int ***cl=mode3_inp->cl; double ***vl=mode3_inp->vl;
           (*rw)=(unsigned int**) malloc((*(mode3_inp->n_th))*sizeof(unsigned int*));
@@ -250,6 +261,10 @@ void mode_2_alg(node** node_arr,double* edge_arr,unsigned int *nds_td, unsigned 
                }
                node* node_hd0=node_arr0[node_hd->num-1];
                out_fl=1;
+               clock_gettime(CLOCK_MONOTONIC,&curr_time);
+               dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+               printf("\nmode3 set up time: %llu",dt_time);
+               
                mode_2_alg(node_arr0,edge_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL);
                free(node_arr0); free(edge_arr0);
                free(nds_td00);
