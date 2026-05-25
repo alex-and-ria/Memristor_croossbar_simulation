@@ -260,6 +260,7 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                
           
           }
+          
           for(curr_node=node_hd;curr_node!=NULL;){
                prev_node=curr_node;
                curr_node=curr_node->next;
