@@ -32,10 +32,22 @@
 
 
 
-m=4; n=m; batch_size=1;
+m=256; n=m; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
+[G_m,Ivec]=adj_to_lapl(G_adj,m,n,Vin);
+tic()
+     [L,U,P]=lu(G_m);
+toc();
+tic()
+y=L\(P*Ivec);
+toc()
+tic()
+x=U\y;
+toc()
+
+
 
 loadlibrary('../libnode_schr.so','../node_schr.h')
 libfunctions('libnode_schr','-full')
@@ -60,7 +72,7 @@ nds_td1_p=libpointer('uint32Ptr',nds_tgt); nds_n1=length(nds_tgt);
 n_th_p=libpointer('uint32Ptr',0);
 
 null_uip=libpointer('uint32Ptr');
-max_m_sz=nds_n1+1;%set 2 submatrixes for mode 3;
+max_m_sz=nds_n1/2+1;%set 2 submatrixes for mode 3;
 
 calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      col_p,cl_vp,...

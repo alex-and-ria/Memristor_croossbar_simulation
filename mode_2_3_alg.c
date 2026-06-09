@@ -33,99 +33,113 @@
 void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl,mode_3_param* mode3_inp,unsigned int shift){
      struct timespec curr_time; long long unsigned int tick,dt_time;
      printf("\nmode2");
-     unsigned int min_cap=64, max_cap=max_nds-1;
-     struct nd_data* mrg=(struct nd_data*) malloc(1*sizeof(struct nd_data));
-     mrg->cap=min_cap; mrg->nums=(unsigned int*) malloc(mrg->cap*sizeof(unsigned int));
-     mrg->vals=(double*) malloc(mrg->cap*sizeof(double));
+     //unsigned int min_cap=64, max_cap=max_nds-1;
      node *prev_node, *curr_node;
      prev_node=node_hd;
      unsigned int *ui_ptr; unsigned int ui_val; double* d_ptr;
-     unsigned int mrg_cnt=0;
+     unsigned int mrg_cnt=0; int num_thr;
+     struct nd_data* mrg;
      clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+     /*unsigned int mrg_sz=node_arr[nds_td[0]-1]->n;//after each node deletion (over i, i<nds_n) neigbour lists change for all neighbours of pivots, and hence, maximun number of neighbours can increase;
+     for(unsigned int i=1;i<nds_n;i++){
+          if(node_arr[nds_td[i]-1]->n>mrg_sz){
+               mrg_sz=node_arr[nds_td[i]-1]->n;
+          
+          }
+     }*/
+     unsigned int mrg_sz=max_nds-node_hd->num;//after deletion in mode1 there is at most max_nds-node_hd->num+1 nodes; hence each node (node can not be a neighbour of itself) can have at most max_nds-node_hd->num neighbourhoods;
+     mrg=(struct nd_data*) malloc(mrg_sz*sizeof(struct nd_data));
+     for(unsigned int i=0;i<mrg_sz;i++){
+          mrg[i].cap=0;
+     }
      for(unsigned int i=0;i<nds_n;i++){
           double sum=0;
           unsigned int n0=nds_td[i],n1;
-          for(unsigned int j=0;j<node_arr[n0-1]->n;j++){
-               sum+=node_arr[n0-1]->vals[j];
-               
+          node* nd0=node_arr[nds_td[i]-1];
+          //#pragma omp parallel for schedule(static) reduction(+:sum)//should be ralativelly small;
+          for(unsigned int j=0;j<nd0->n;j++){
+               sum+=nd0->vals[j];
           }
-          for(unsigned int j=0;j<node_arr[n0-1]->n;j++){
-               n1=node_arr[n0-1]->nums[j];
-               double cache_scl=node_arr[n0-1]->vals[j]/sum;
+          num_thr=nd0->n;
+          #pragma omp parallel for if(omp_in_parallel()==0) schedule(static) num_threads(num_thr<=omp_get_max_threads()?num_thr:omp_get_max_threads()) private(n1,mrg_cnt,ui_val,ui_ptr,d_ptr)
+          for(unsigned int j=0;j<nd0->n;j++){
+               n1=nd0->nums[j];
+               node* nd1=node_arr[n1-1];
+               unsigned n0_n1_cap=min(max(nd0->n+nd1->n,2*mrg[j].cap),max_nds-1);
+               if(mrg[j].cap<n0_n1_cap){
+                    if(mrg[j].cap>0){
+                         free(mrg[j].nums); free(mrg[j].vals);
+                    }
+                    mrg[j].cap=n0_n1_cap;
+                    mrg[j].nums=(unsigned int*) malloc(mrg[j].cap*sizeof(unsigned int));
+                    mrg[j].vals=(double*) malloc(mrg[j].cap*sizeof(double));
+               }
+               double cache_scl=nd0->vals[j]/sum;
                mrg_cnt=0;
                unsigned int q=0,w=0;
-               if(mrg->cap<min((node_arr[n1-1]->n + node_arr[n0-1]->n),max_nds-1)){
-                    mrg->cap=min(max(node_arr[n1-1]->n+node_arr[n0-1]->n,2*mrg->cap),max_cap);
-                    /*mrg->nums=(unsigned int*) realloc(mrg->nums,mrg->cap*sizeof(unsigned int));
-                    mrg->vals=(double*) realloc(mrg->vals,mrg->cap*sizeof(double));*/
-                    free(mrg->nums); free(mrg->vals);
-                    mrg->nums=(unsigned int*) malloc(mrg->cap*sizeof(unsigned int));
-                    mrg->vals=(double*) malloc(mrg->cap*sizeof(double));//no need to keep (copy during realloc) old data;
-               
-               }
-               for(;q<node_arr[n0-1]->n && w<node_arr[n1-1]->n;){
-                    if(node_arr[n0-1]->nums[q]==n1){
+               for(;q<nd0->n && w<nd1->n;){
+                    if(nd0->nums[q]==n1){
                          q++; continue;
                     }
-                    if(node_arr[n1-1]->nums[w]==n0){
+                    if(nd1->nums[w]==n0){
                          w++; continue;
                     }
-                    if(node_arr[n0-1]->nums[q]==node_arr[n1-1]->nums[w]){
-                         mrg->nums[mrg_cnt]=node_arr[n1-1]->nums[w];
-                         mrg->vals[mrg_cnt]=node_arr[n1-1]->vals[w]+cache_scl*node_arr[n0-1]->vals[q];//(node_arr[n0-1]->vals[j]*node_arr[n0-1]->vals[q])/sum;
+                    if(nd0->nums[q]==nd1->nums[w]){
+                         mrg[j].nums[mrg_cnt]=nd1->nums[w];
+                         mrg[j].vals[mrg_cnt]=nd1->vals[w]+cache_scl*nd0->vals[q];//(nd0->vals[j]*nd0->vals[q])/sum;
                          mrg_cnt++;
                          q++; w++;
                     }
-                    else if(node_arr[n0-1]->nums[q]<node_arr[n1-1]->nums[w]){
-                         mrg->nums[mrg_cnt]=node_arr[n0-1]->nums[q];
-                         mrg->vals[mrg_cnt]=cache_scl*node_arr[n0-1]->vals[q];
+                    else if(nd0->nums[q]<nd1->nums[w]){
+                         mrg[j].nums[mrg_cnt]=nd0->nums[q];
+                         mrg[j].vals[mrg_cnt]=cache_scl*nd0->vals[q];
                          mrg_cnt++;
                          q++;
                     }
                     else{
-                         mrg->nums[mrg_cnt]=node_arr[n1-1]->nums[w];
-                         mrg->vals[mrg_cnt]=node_arr[n1-1]->vals[w];
+                         mrg[j].nums[mrg_cnt]=nd1->nums[w];
+                         mrg[j].vals[mrg_cnt]=nd1->vals[w];
                          mrg_cnt++;
                          w++;
                     }
                     
                }
-               while(q<node_arr[n0-1]->n){
-                    if(node_arr[n0-1]->nums[q]==n1){
+               while(q<nd0->n){
+                    if(nd0->nums[q]==n1){
                          q++;
                     
                     }
                     else{
-                         mrg->nums[mrg_cnt]=node_arr[n0-1]->nums[q];
-                         mrg->vals[mrg_cnt]=cache_scl*node_arr[n0-1]->vals[q];
+                         mrg[j].nums[mrg_cnt]=nd0->nums[q];
+                         mrg[j].vals[mrg_cnt]=cache_scl*nd0->vals[q];
                          mrg_cnt++;
                          q++;
                     
                     }
                
                }
-               while(w<node_arr[n1-1]->n){
-                    if(node_arr[n1-1]->nums[w]==n0){
+               while(w<nd1->n){
+                    if(nd1->nums[w]==n0){
                          w++;
                     
                     }
                     else{
-                         mrg->nums[mrg_cnt]=node_arr[n1-1]->nums[w];
-                         mrg->vals[mrg_cnt]=node_arr[n1-1]->vals[w];
+                         mrg[j].nums[mrg_cnt]=nd1->nums[w];
+                         mrg[j].vals[mrg_cnt]=nd1->vals[w];
                          mrg_cnt++;
                          w++;
                     
                     }
                
                }
-               ui_val=node_arr[n1-1]->cap; node_arr[n1-1]->cap=mrg->cap; mrg->cap=ui_val;
-               ui_ptr=node_arr[n1-1]->nums; node_arr[n1-1]->nums=mrg->nums; mrg->nums=ui_ptr;
-               d_ptr=node_arr[n1-1]->vals; node_arr[n1-1]->vals=mrg->vals; mrg->vals=d_ptr;
-               node_arr[n1-1]->n=mrg_cnt;
+               ui_val=nd1->cap; nd1->cap=mrg[j].cap; mrg[j].cap=ui_val;
+               ui_ptr=nd1->nums; nd1->nums=mrg[j].nums; mrg[j].nums=ui_ptr;
+               d_ptr=nd1->vals; nd1->vals=mrg[j].vals; mrg[j].vals=d_ptr;
+               nd1->n=mrg_cnt;
                
           
-          }
-          curr_node=node_arr[n0-1];
+          }//neigbours of n0;
+          /*curr_node=nd0;
           if(curr_node==node_hd){
                node_hd=curr_node->next;
                prev_node=node_hd;
@@ -141,12 +155,43 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           
           }
           free(curr_node->nums);
-          free(curr_node->vals);
+          free(curr_node->vals);*/
           //free(curr_node);
           
      }
-     free(mrg->nums);
+     node nd_ptr;
+     nd_ptr.next=node_hd;
+     curr_node=node_hd; prev_node=&nd_ptr;
+     for(unsigned int i=0;i<nds_n;){
+          if(curr_node->num==nds_td[i]){
+               prev_node->next=curr_node->next;
+               if(curr_node==node_hd){
+                    node_hd=curr_node->next;
+               
+               }
+               free(curr_node->nums);
+               free(curr_node->vals);
+               curr_node=prev_node->next;
+               i++;
+          
+          }
+          else{
+               prev_node=curr_node;
+               curr_node=curr_node->next;
+          
+          
+          }
+     
+     }
+     /*free(mrg->nums);
      free(mrg->vals);
+     free(mrg);*/
+     for(unsigned int i=0;i<mrg_sz;i++){
+          if(mrg[i].cap>0){
+               free(mrg[i].nums); free(mrg[i].vals);
+          }
+     
+     }
      free(mrg);
      clock_gettime(CLOCK_MONOTONIC,&curr_time);
      dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
@@ -199,16 +244,19 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           (*(mode3_inp->ln))=(unsigned int*) malloc((*(mode3_inp->n_th))*sizeof(unsigned int));
           max_nds=max_nds-node_hd->num+1;
           dt_time=0;
+          out_fl=1;
+          num_thr=*(mode3_inp->n_th);
+          #pragma omp parallel for schedule(static) num_threads((num_thr<=omp_get_max_threads())?num_thr:omp_get_max_threads()) private(curr_node,prev_node)
           for(unsigned int i=0;i<(*(mode3_inp->n_th));i++){
-               clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+               //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
                node** node_arr0=(node**) malloc(max_nds*sizeof(node*));
                node* node_mem=(node*) malloc(max_nds*sizeof(node));
-               node* nd_ptr=(node*) malloc(1*sizeof(node)); prev_node=nd_ptr;
+               node nd_ptr; prev_node=&nd_ptr;
                for(curr_node=node_hd; curr_node!=NULL; curr_node=curr_node->next){
                     node_arr0[curr_node->num-node_hd->num]=&(node_mem[curr_node->num-node_hd->num]);
                     node_arr0[curr_node->num-node_hd->num]->num=curr_node->num-node_hd->num+1;
                     node_arr0[curr_node->num-node_hd->num]->n=curr_node->n;
-                    node_arr0[curr_node->num-node_hd->num]->cap=curr_node->cap;
+                    node_arr0[curr_node->num-node_hd->num]->cap=curr_node->cap;//TODO see if memory capped, try different (node->n) capacities;
                     node_arr0[curr_node->num-node_hd->num]->nums=(unsigned int*) malloc(curr_node->cap*sizeof(unsigned int));
                     node_arr0[curr_node->num-node_hd->num]->vals=(double*) malloc(curr_node->cap*sizeof(double));
                     for(unsigned int j=0;j<curr_node->n;j++){
@@ -220,7 +268,6 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                
                }
                prev_node->next=NULL;
-               free(nd_ptr);
                unsigned int *nds_td00; unsigned int nds_n00;
                
                if(i<(*(mode3_inp->n_th))-1){
@@ -247,9 +294,9 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                
                }
                node* node_hd0=node_arr0[0];
-               out_fl=1;
-               clock_gettime(CLOCK_MONOTONIC,&curr_time);
-               dt_time+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+               //out_fl=1;
+               //clock_gettime(CLOCK_MONOTONIC,&curr_time);
+               //dt_time+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
                
                mode_2_alg(node_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL,node_hd->num-1);
                free(node_arr0);
