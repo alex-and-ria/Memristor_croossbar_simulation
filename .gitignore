@@ -33,17 +33,19 @@
 log*
 *.csv
 *.ods
-*.o
-dts*
-*.asv
-*.so
-.nfs*
-/tst
-tst_tmp*
 *.txt
 *.orig
 
+dts*
+*.asv
+*.o
+*.so
+.nfs*
+/tst
 
+tst_tmp*
+tst_fast*
+!/OpenMP_timing/**/*
 
 
 

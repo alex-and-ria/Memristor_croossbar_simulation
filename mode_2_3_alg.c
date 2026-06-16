@@ -30,24 +30,16 @@
 
 
 #include <time.h>
-void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl,mode_3_param* mode3_inp,unsigned int shift){
+void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl,mode_3_param* mode3_inp,unsigned int shift,FILE* fp){
      struct timespec curr_time; long long unsigned int tick,dt_time;
-     printf("\nmode2");
+     if(fp!=NULL) fprintf(fp,"\nmode2; nds_td j iter\n");
      //unsigned int min_cap=64, max_cap=max_nds-1;
      node *prev_node, *curr_node;
      prev_node=node_hd;
      unsigned int *ui_ptr; unsigned int ui_val; double* d_ptr;
      unsigned int mrg_cnt=0; int num_thr;
      struct nd_data* mrg;
-     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
-     /*unsigned int mrg_sz=node_arr[nds_td[0]-1]->n;//after each node deletion (over i, i<nds_n) neigbour lists change for all neighbours of pivots, and hence, maximun number of neighbours can increase;
-     for(unsigned int i=1;i<nds_n;i++){
-          if(node_arr[nds_td[i]-1]->n>mrg_sz){
-               mrg_sz=node_arr[nds_td[i]-1]->n;
-          
-          }
-     }*/
-     unsigned int mrg_sz=max_nds-node_hd->num;//after deletion in mode1 there is at most max_nds-node_hd->num+1 nodes; hence each node (node can not be a neighbour of itself) can have at most max_nds-node_hd->num neighbourhoods;
+     unsigned int mrg_sz=(/*fl_pl==1 && */ fl_mem_pl==1 && omp_in_parallel()==0)?max_nds-node_hd->num:1;//after deletion in mode1 there is at most max_nds-node_hd->num+1 nodes; hence each node (node can not be a neighbour of itself) can have at most max_nds-node_hd->num neighbourhoods;
      mrg=(struct nd_data*) malloc(mrg_sz*sizeof(struct nd_data));
      for(unsigned int i=0;i<mrg_sz;i++){
           mrg[i].cap=0;
@@ -61,18 +53,23 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                sum+=nd0->vals[j];
           }
           num_thr=nd0->n;
-          #pragma omp parallel for if(omp_in_parallel()==0) schedule(static) num_threads(num_thr<=omp_get_max_threads()?num_thr:omp_get_max_threads()) private(n1,mrg_cnt,ui_val,ui_ptr,d_ptr)
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+          #if (fl_pl==1)
+               #pragma omp parallel for if(omp_in_parallel()==0) schedule(static) num_threads(num_thr<=omp_get_max_threads()?num_thr:omp_get_max_threads()) private(n1,mrg_cnt,ui_val,ui_ptr,d_ptr)
+          #endif
           for(unsigned int j=0;j<nd0->n;j++){
                n1=nd0->nums[j];
                node* nd1=node_arr[n1-1];
-               unsigned n0_n1_cap=min(max(nd0->n+nd1->n,2*mrg[j].cap),max_nds-1);
-               if(mrg[j].cap<n0_n1_cap){
-                    if(mrg[j].cap>0){
-                         free(mrg[j].nums); free(mrg[j].vals);
+               struct nd_data* curr_mrg=(mrg_sz>1)?&(mrg[j]):mrg;
+               unsigned n0_n1_cap=min(max(nd0->n+nd1->n,2*curr_mrg->cap),max_nds-node_hd->num);
+               
+               if(curr_mrg->cap<min(nd0->n+nd1->n,max_nds-node_hd->num)){
+                    if(curr_mrg->cap>0){
+                         free(curr_mrg->nums); free(curr_mrg->vals);
                     }
-                    mrg[j].cap=n0_n1_cap;
-                    mrg[j].nums=(unsigned int*) malloc(mrg[j].cap*sizeof(unsigned int));
-                    mrg[j].vals=(double*) malloc(mrg[j].cap*sizeof(double));
+                    curr_mrg->cap=n0_n1_cap;
+                    curr_mrg->nums=(unsigned int*) malloc(curr_mrg->cap*sizeof(unsigned int));
+                    curr_mrg->vals=(double*) malloc(curr_mrg->cap*sizeof(double));
                }
                double cache_scl=nd0->vals[j]/sum;
                mrg_cnt=0;
@@ -85,20 +82,20 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                          w++; continue;
                     }
                     if(nd0->nums[q]==nd1->nums[w]){
-                         mrg[j].nums[mrg_cnt]=nd1->nums[w];
-                         mrg[j].vals[mrg_cnt]=nd1->vals[w]+cache_scl*nd0->vals[q];//(nd0->vals[j]*nd0->vals[q])/sum;
+                         curr_mrg->nums[mrg_cnt]=nd1->nums[w];
+                         curr_mrg->vals[mrg_cnt]=nd1->vals[w]+cache_scl*nd0->vals[q];//(nd0->vals[j]*nd0->vals[q])/sum;
                          mrg_cnt++;
                          q++; w++;
                     }
                     else if(nd0->nums[q]<nd1->nums[w]){
-                         mrg[j].nums[mrg_cnt]=nd0->nums[q];
-                         mrg[j].vals[mrg_cnt]=cache_scl*nd0->vals[q];
+                         curr_mrg->nums[mrg_cnt]=nd0->nums[q];
+                         curr_mrg->vals[mrg_cnt]=cache_scl*nd0->vals[q];
                          mrg_cnt++;
                          q++;
                     }
                     else{
-                         mrg[j].nums[mrg_cnt]=nd1->nums[w];
-                         mrg[j].vals[mrg_cnt]=nd1->vals[w];
+                         curr_mrg->nums[mrg_cnt]=nd1->nums[w];
+                         curr_mrg->vals[mrg_cnt]=nd1->vals[w];
                          mrg_cnt++;
                          w++;
                     }
@@ -110,8 +107,8 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                     
                     }
                     else{
-                         mrg[j].nums[mrg_cnt]=nd0->nums[q];
-                         mrg[j].vals[mrg_cnt]=cache_scl*nd0->vals[q];
+                         curr_mrg->nums[mrg_cnt]=nd0->nums[q];
+                         curr_mrg->vals[mrg_cnt]=cache_scl*nd0->vals[q];
                          mrg_cnt++;
                          q++;
                     
@@ -124,39 +121,24 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                     
                     }
                     else{
-                         mrg[j].nums[mrg_cnt]=nd1->nums[w];
-                         mrg[j].vals[mrg_cnt]=nd1->vals[w];
+                         curr_mrg->nums[mrg_cnt]=nd1->nums[w];
+                         curr_mrg->vals[mrg_cnt]=nd1->vals[w];
                          mrg_cnt++;
                          w++;
                     
                     }
                
                }
-               ui_val=nd1->cap; nd1->cap=mrg[j].cap; mrg[j].cap=ui_val;
-               ui_ptr=nd1->nums; nd1->nums=mrg[j].nums; mrg[j].nums=ui_ptr;
-               d_ptr=nd1->vals; nd1->vals=mrg[j].vals; mrg[j].vals=d_ptr;
+               ui_val=nd1->cap; nd1->cap=curr_mrg->cap; curr_mrg->cap=ui_val;
+               ui_ptr=nd1->nums; nd1->nums=curr_mrg->nums; curr_mrg->nums=ui_ptr;
+               d_ptr=nd1->vals; nd1->vals=curr_mrg->vals; curr_mrg->vals=d_ptr;
                nd1->n=mrg_cnt;
                
           
-          }//neigbours of n0;
-          /*curr_node=nd0;
-          if(curr_node==node_hd){
-               node_hd=curr_node->next;
-               prev_node=node_hd;
-               
           }
-          else{
-               while(prev_node->next!=curr_node){
-                    prev_node=prev_node->next;
-
-               }
-               prev_node->next=curr_node->next;
-               
-          
-          }
-          free(curr_node->nums);
-          free(curr_node->vals);*/
-          //free(curr_node);
+          clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+          if(fp!=NULL) fprintf(fp,"%llu,",dt_time);
           
      }
      node nd_ptr;
@@ -193,11 +175,9 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
      
      }
      free(mrg);
-     clock_gettime(CLOCK_MONOTONIC,&curr_time);
-     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
      if(out_fl==1){
-          printf("\nnodes processed: %u",nds_n);
-          printf("\ntotal time: %llu",dt_time);
+          if(fp!=NULL) fprintf(fp,"\nnodes processed: %u",nds_n);
+          //printf("\ntotal time: %llu",dt_time);
      
      }
      if(out_fl==1){
@@ -246,9 +226,12 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           dt_time=0;
           out_fl=1;
           num_thr=*(mode3_inp->n_th);
-          #pragma omp parallel for schedule(static) num_threads((num_thr<=omp_get_max_threads())?num_thr:omp_get_max_threads()) private(curr_node,prev_node)
+          fprintf(fp,"\n\nmode3; num_thr=,%d\n",num_thr);
+          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+          #if fl_pl==1
+               #pragma omp parallel for schedule(static) num_threads((num_thr<=omp_get_max_threads())?num_thr:omp_get_max_threads()) private(curr_node,prev_node)
+          #endif
           for(unsigned int i=0;i<(*(mode3_inp->n_th));i++){
-               //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
                node** node_arr0=(node**) malloc(max_nds*sizeof(node*));
                node* node_mem=(node*) malloc(max_nds*sizeof(node));
                node nd_ptr; prev_node=&nd_ptr;
@@ -298,7 +281,7 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                //clock_gettime(CLOCK_MONOTONIC,&curr_time);
                //dt_time+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
                
-               mode_2_alg(node_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL,node_hd->num-1);
+               mode_2_alg(node_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL,node_hd->num-1,NULL);
                free(node_arr0);
                free(nds_td00);
                free(node_mem);
@@ -307,6 +290,9 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                
           
           }
+          clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+          fprintf(fp,"%llu,",dt_time);
           
           for(curr_node=node_hd;curr_node!=NULL;){
                prev_node=curr_node;
@@ -316,7 +302,6 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                //free(prev_node);
           
           }
-          printf("\nmode3 set up time: %llu",dt_time);
      
      
      

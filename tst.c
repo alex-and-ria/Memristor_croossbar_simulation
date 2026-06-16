@@ -79,9 +79,9 @@ int main(int argc, char**argv){
           //schr_read(unsigned int *nds_td, unsigned int nds_n,double th_nb_koef,unsigned int m, unsigned int n, unsigned int *row, unsigned int *col, unsigned int* val,unsigned int len)*/
           
      }
-     else if(argc==4 && strcmp(argv[3],"debug_mode_alg")==0){
+     else if(argc==4 /*&& strcmp(argv[3],"debug_mode_alg")==0*/){
           dbg=mode_1_2_3;
-          dense_rdct(row,(unsigned long long int*)(&rw_), col, (unsigned long long int*)(&cl_), val, (unsigned long long int*)(&vl_), &len1,&ln_, nds_td, &nds_n,atof(argv[1]), nds_td1, nds_n1, &n_th,max_m_sz, mode_1_2_3,0);
+          dense_rdct(row,(unsigned long long int*)(&rw_), col, (unsigned long long int*)(&cl_), val, (unsigned long long int*)(&vl_), &len1,&ln_, nds_td, &nds_n,/*atof(argv[1])*/0, nds_td1, nds_n1, &n_th,max_m_sz, mode_1_2_3,0);
      
      }
      else{

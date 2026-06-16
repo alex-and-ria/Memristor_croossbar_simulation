@@ -1,0 +1,16 @@
+
+fl_pl=,0
+mode1:
+set up=, 15704
+mode1_loop
+nds_td0 and nds_td_rem set up,indipendent set search,sum[i] calculation,star_to_mesh,nodes, per_node
+299,1262,213,1667,8,
+103,900,161,1533,5,
+93,805,166,1960,4,
+66,352,0,0,1,-,
+
+mode2; nds_td j iter
+1932,1131,2016,1130,1118,527,589,994,787,658,647,
+
+mode3; num_thr=,2
+8849,
