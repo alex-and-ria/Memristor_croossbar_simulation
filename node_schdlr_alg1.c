@@ -54,7 +54,9 @@ struct nd_data{unsigned int cap; unsigned int* nums; double* vals;};
 
 //#define fl_pl 0
 //#define fl_nm "OpenMP_tst.ods"
-//#define fl_mem_pl 0
+//#define fl_mem_pl 0]
+
+//#define fl_app 1
 
 #include"mode_2_3_alg.c"
 
@@ -62,12 +64,13 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      unsigned int max_nds=col[len-1];
      unsigned int min_cap=64, max_cap=max_nds-1;
      struct timespec curr_time; long long unsigned int tick,dt_time;//, nb_time=0, transf_time=0, frr_time=0;
-     #if (fl_pl==0)
+     unsigned int fp_line=4;
+     #if (fl_app==0)
           FILE* fp=fopen(fl_nm, "wb+");
      #else
           FILE* fp=fopen(fl_nm, "ab+");
      #endif
-     fprintf(fp,"\nfl_pl=,%d",fl_pl);
+     fprintf(fp,"\n"/*fl_pl=,%d",fl_pl*/);
      node** node_arr=(node**) malloc(max_nds*sizeof(node*));
      unsigned int* nds_td0=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int* nds_td_rem=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
@@ -87,10 +90,10 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      node* curr_node=node_hd;
      node_arr[0]=curr_node;
      int curr_omp_n_th=max_nds-1;
-     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
-     #if fl_pl==1
+     //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+     /*#if fl_pl==1
           #pragma omp parallel for schedule(static) num_threads((curr_omp_n_th/10<=omp_get_max_threads())?curr_omp_n_th/10:omp_get_max_threads())
-     #endif
+     #endif*///parallelization tested;
      for(unsigned int i=col[0]+1;i<=col[len-1];i++){//assumption here is that node numbering is sequential without skipping the numbers;
           node_arr[i-1]=&(node_mem[i-1]);
           node_arr[i-1]->num=i;
@@ -99,9 +102,9 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
           node_arr[i-1]->vals=(double*)malloc(node_arr[i-1]->cap*sizeof(double));
           //node_arr[i-2]->next=node_arr[i-1];
      }
-     clock_gettime(CLOCK_MONOTONIC,&curr_time);
-     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
-     fprintf(fp,"\nmode1:\nset up=, %llu",dt_time);
+     //clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     //dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     //fprintf(fp,"\nmode1:\nset up=, %llu",dt_time);
      for(unsigned int i=col[0]+1;i<=col[len-1];i++){
           node_arr[i-2]->next=node_arr[i-1];
      
@@ -165,18 +168,18 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      }
      
      double curr_thr_koef=0;
-     fprintf(fp,"\nmode1_loop");
-     fprintf(fp,"\nnds_td0 and nds_td_rem set up,indipendent set search,sum[i] calculation,star_to_mesh,nodes, per_node\n");
+     ////fprintf(fp,"\nmode1_loop");
+     ////fprintf(fp,"\nstar_to_mesh,nodes, per_node\n");
      while(1/*dbg_cnt<dbg_max*/){
-     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+     //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      if(fl_pl==1){
-           #pragma omp parallel
+           //#pragma omp parallel//parallelization tested;
           {
-               #pragma omp for schedule(static)
+               //#pragma omp for schedule(static)
                for(unsigned int i=0;i<max_nds;i++){
                     nds_td0[i]=0; nds_td_rem[i]=0;
                }
-               #pragma omp for schedule(static)
+               //#pragma omp for schedule(static)
                for(unsigned int i=0;i<nds_n2;i++){
                     nds_td0[nds_td2[i]-1]=nds_td2[i]; nds_td_rem[nds_td2[i]-1]=nds_td2[i];
                }
@@ -191,13 +194,12 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
                nds_td0[nds_td2[i]-1]=nds_td2[i]; nds_td_rem[nds_td2[i]-1]=nds_td2[i];
           }
      }
-     clock_gettime(CLOCK_MONOTONIC,&curr_time);
-     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     //clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     //dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
      //fprintf("\nmode1:\nnds_td0 and nds_td_rem set up=, %llu",dt_time);
-     fprintf(fp,"%llu,",dt_time);
-     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
-    
+     //fprintf(fp,"%llu,",dt_time);
      
+     //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      for(unsigned int i=0;i<max_nds;){
           while(i<max_nds && nds_td0[i]==0){
                i++;
@@ -207,9 +209,9 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
                nds_td_rem[i]=0;
                curr_node=node_arr[i];//nds_td0[i] should be equal to i+1 if it is not zero; curr_node->num should also be equal to i+1;
                curr_omp_n_th=curr_node->n; //sz_gain==64
-               #if fl_pl==1
+               /*#if fl_pl==1//paralelization tested
                     #pragma omp parallel for schedule(static) num_threads((curr_omp_n_th/10<=omp_get_max_threads())?curr_omp_n_th/10:omp_get_max_threads())
-               #endif
+               #endif*/
                for(unsigned int j=0;j<curr_node->n;j++){
                     if(curr_node->num<curr_node->nums[j]) nds_td0[curr_node->nums[j]-1]=0;//two threads can write to same location in nds_t0 at the same time (formally, data race), but since they all write 0, it is still 0 no matter who was last to wrote it;
                     node* node_nb=node_arr[curr_node->nums[j]-1];
@@ -225,10 +227,10 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
           }
           
      }//at this point nds_td0 and nds_td_rem should be "symmetric" in a sense that all nodes form nds_td2 should now be devided in indipendent set (nds_td0, not having common neighbour) and whatever left from nds_td2 (nds_td_rem);
-     clock_gettime(CLOCK_MONOTONIC,&curr_time);
-     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     //clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     //dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
      //printf("\nmode1:\nindipendent set search: %llu",dt_time);
-     fprintf(fp,"%llu,",dt_time);
+     //fprintf(fp,"%llu,",dt_time);
      for(unsigned int i=0;i<max_nds;i++){
           if(nds_td0[i]!=0){
                //nds_td_rem[nds_td0[i]-1]=0;
@@ -245,7 +247,7 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      }
      if(nds_n0>=1) curr_thr_koef=(nds_n0+0.)/(nds_n0+nds_n_rem);
      if(nds_n0<=1 || curr_thr_koef<thr_koef){
-          fprintf(fp,"0,0,%d,-,\n",nds_n0);//for balanced output on exit;
+          ////fprintf(fp,"0,0,%d",nds_n0);//for balanced output on exit;
           break;
      
      }
@@ -255,11 +257,11 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      unsigned int n1;
      unsigned int bf_mg_cnt=0;
      unsigned int *ui_ptr; unsigned int ui_val; double* d_ptr;
-     clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+     //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
     
-     #if fl_pl==1
+     /*#if fl_pl==1//paralelization tested;
           #pragma omp parallel for schedule(static) num_threads((nds_n0<=(unsigned int)omp_get_max_threads())?nds_n0:(unsigned int)omp_get_max_threads())
-     #endif
+     #endif*/
      for(unsigned int i=0;i<nds_n0;i++){
           sums[i]=0;
           node* node_pivot=node_arr[nds_td0[i]-1];
@@ -270,10 +272,10 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
           }
      }
      
-     clock_gettime(CLOCK_MONOTONIC,&curr_time);
-     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     //clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     //dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
      //printf("\nmode1:\nsum[i] calculation: %llu",dt_time);
-     fprintf(fp,"%llu,",dt_time);
+     //fprintf(fp,"%llu,",dt_time);
      
      if(/*fl_pl==1 &&*/ fl_mem_pl==1 && mrg_sz<min(nds_n0,(unsigned int)omp_get_max_threads())){//nds_n0 should be bigest on the first iteration (since the original graph is more sparce, and all node deletion operation make it more dense, bigger set of indipendent (no common neighbours) nodes expected in the beginning), hence this condition should be true only on the first (or on several first) iterations;
           if(mrg_sz!=0){
@@ -297,7 +299,7 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
      #if fl_pl==1
           //int num_threads_now=(nds_n0<=(unsigned int)omp_get_max_threads())?nds_n0:(unsigned int)omp_get_max_threads(); printf("\nnum_threads_now=%d",num_threads_now);
-          #pragma omp parallel for schedule(static) num_threads((nds_n0<=(unsigned int)omp_get_max_threads())?nds_n0:(unsigned int)omp_get_max_threads()) private(n1,bf_mg_cnt,ui_val,ui_ptr,d_ptr)
+          #pragma omp parallel for schedule(static) num_threads((nds_n0<=(unsigned int)omp_get_max_threads())?nds_n0:(unsigned int)omp_get_max_threads()) private(n1,bf_mg_cnt,ui_val,ui_ptr,d_ptr) if(max_nds>2*64*64+64+1)
      #endif
      for(unsigned int i=0;i<nds_n0;i++){
           struct nd_data* curr_mrg=(/*fl_pl==1*/ fl_mem_pl==1)?&(mrg[omp_get_thread_num()]):mrg;
@@ -414,8 +416,8 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      clock_gettime(CLOCK_MONOTONIC,&curr_time);
      dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
      //printf("\nmode1:\nstar_to_mesh: %llu",dt_time);
-     fprintf(fp,"%llu",dt_time);
-     fprintf(fp,",%d,\n",nds_n0);
+     ////fprintf(fp,"%llu,",dt_time);
+     ////fprintf(fp,",%d,=A%d/B%d\n",nds_n0,fp_line,fp_line); fp_line++;//TODO correct (total time); sweep number of thereads; statistic data (and helper program for calculation); check mode 2 (statusic, helper, total time); find transition point; check mode3 (static, helper(?));
      /////////////////////////////////////////////////////////////////////at this point star mesh transform should be completed for this iteration
      
      
