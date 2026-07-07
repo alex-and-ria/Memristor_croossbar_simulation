@@ -32,7 +32,7 @@
 
 
 
-m=256; n=m; batch_size=1;
+m=128; n=m; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
@@ -41,11 +41,15 @@ tic()
      [L,U,P]=lu(G_m);
 toc();
 tic()
-y=L\(P*Ivec);
+     y=L\(P*Ivec);
 toc()
 tic()
-x=U\y;
+     x=U\y;
 toc()
+
+figure(1); spy(G_m);
+figure(2); spy(L);
+figure(3); spy(U);
 
 
 
@@ -72,7 +76,7 @@ nds_td1_p=libpointer('uint32Ptr',nds_tgt); nds_n1=length(nds_tgt);
 n_th_p=libpointer('uint32Ptr',0);
 
 null_uip=libpointer('uint32Ptr');
-max_m_sz=nds_n1/2+1;%set 2 submatrixes for mode 3;
+max_m_sz=nds_n1+1;%set 2 submatrixes for mode 3;
 
 calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      col_p,cl_vp,...
@@ -86,10 +90,10 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
 
 setdatatype(len_pp.Value,'uint32Ptr',n_th_p.Value);
 
-G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
+%G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
 
 
-if(n_th_p.Value>=1)
+if(0)%n_th_p.Value>=1)
      for(ii=0:(n_th_p.Value-1))
           rw_c=libpointer('uint32PtrPtr');
           cl_c=libpointer('uint32PtrPtr');
@@ -119,7 +123,7 @@ if(n_th_p.Value>=1)
           sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
           max(abs(sol_diff(~isnan(x))))
      end
-else
+elseif(1)
      %q=calllib('libnode_schr','tst_pnt',33);
      rw_c=libpointer('uint32PtrPtr');
      cl_c=libpointer('uint32PtrPtr');
@@ -135,18 +139,33 @@ else
      %     3, 13, 19, 29
      %     ];%this is what nodes get deleted in first iteration of mode1 for 4x4 crossbar;
 
-     G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
+     %G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
      G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
-     figure(1); spy(G_one_iter);%resulting adjacency matrix (after Matlab implementation);
-     figure(2); spy(G_one_iter-G_iter)%difference with C result;
-     sum(sum(abs(G_one_iter-G_iter)))
+     %figure(1); spy(G_one_iter);%resulting adjacency matrix (after Matlab implementation);
+     %figure(2); spy(G_one_iter-G_iter)%difference with C result;
+     %sum(sum(abs(G_one_iter-G_iter)))
 
 
      [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
-     [L,U,P]=lu(G_m); y=L\(P*Ivec0); x=U\y;
-     [Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);%ground truth approximation;
-     sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
-     max(abs(sol_diff(~isnan(x))))
+     G_m00=G_m(cl_c.Value(1):end,cl_c.Value(1):end);
+     Ivec00=Ivec0(cl_c.Value(1):end,1);
+     tic();
+          [L,U,P]=lu(G_m00);
+     toc();
+     
+     tic();
+          y=L\(P*Ivec00);
+     toc();
+     tic();
+          x=U\y;
+     toc();
+     figure(4); spy(G_m00);
+     figure(5); spy(L);
+     figure(6); spy(U);
+     %[Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);%ground truth approximation;
+     %sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
+     %max(abs(sol_diff(~isnan(x))))
+     
      
 end
 

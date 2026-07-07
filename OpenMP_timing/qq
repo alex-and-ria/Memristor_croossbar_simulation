@@ -1,0 +1,5 @@
+=AVERAGE(A1:A10)
+=STDEV.S(A1:A10)
+for ii=1:10
+tst_1; system("cd .. && gcc tst.c -o tst_fast -O3 -march=native -fopenmp -DNDEBUG && ./tst_fast 0 0 0")
+end
