@@ -24,7 +24,7 @@ fl_nm=strcat('/share/share0/abc/star_mesh/rw_.h');
 if(f_id<0)
      disp('f_id<0');
 end
-m=32; n=m; batch_size=1;
+m=256; n=m; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);

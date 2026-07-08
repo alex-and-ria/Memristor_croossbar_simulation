@@ -346,17 +346,20 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
                curr_node=curr_node->next;
           
           }
-     clock_gettime(CLOCK_MONOTONIC,&curr_time);
-     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
-     fprintf(fp,"%llu,%d,%lf\n",dt_time,nds_n0,(double) dt_time/nds_n0);
-     //fprintf(fp,"%llu,%d\n",dt_time,nds_n0);
-     //printf("\nmode1:\nstar_to_mesh: %llu",dt_time);
-     ////fprintf(fp,"%llu,",dt_time);
+     
+          //fprintf(fp,"%llu,%d\n",dt_time,nds_n0);
+          //printf("\nmode1:\nstar_to_mesh: %llu",dt_time);
+          ////fprintf(fp,"%llu,",dt_time);
 
-}
+     }
      /////////////////////////////////at this point nums array are edited to match new graph connectivity;
      
      
+     
+     
+     clock_gettime(CLOCK_MONOTONIC,&curr_time);
+     dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+     fprintf(fp,/*"%llu,%d,*/"%lf\n",/*dt_time,nds_n0,*/(double) dt_time/nds_n0);
      
      ui_ptr=nds_td2; nds_td2=nds_td_rem; nds_td_rem=ui_ptr;
      nds_n2=nds_n_rem; nds_n0=0; nds_n_rem=0;
