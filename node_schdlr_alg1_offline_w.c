@@ -32,50 +32,35 @@
 
 
 #include<stdio.h>
+#include<string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 
-typedef struct node{
-     unsigned int num;
-     unsigned int n;
-     unsigned int cap;
-     unsigned int* nums;
-     double* vals;
-     struct node* next;
-} node;
-
-typedef struct{
-     unsigned int ***rw; unsigned int*** cl; double***vl; unsigned int** ln; unsigned int* nds_tgt; unsigned int tgt_n1; unsigned int max_m_sz; unsigned int* n_th;
-} mode_3_param;
-
-struct nd_data{unsigned int cap; unsigned int* nums; double* vals;};
-
-#define min(a,b) ((a<b)?(a):(b))
-#define max(a,b) ((a>b)?(a):(b))
-
-//#define fl_nm "OpenMP_tst.csv"
-
-
-#include"mode_2_3_alg.c"
-
-void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp){//TODO fix dt_times, fix printf; benchmark, use opmp thr;
+void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n){
      unsigned int max_nds=col[len-1];
      unsigned int min_cap=64, max_cap=max_nds-1;
-     FILE* fp=fopen(fl_nm, "w+");
-     fprintf(fp,"\nmode1:\n"/*fl_pl=,%d",fl_pl*/);
+     unsigned int buff_sz=64; char ch_buff[buff_sz];
+     snprintf(ch_buff,buff_sz,"mode1_%ux%u",m,n);
+     int fd=open(ch_buff, O_RDWR | O_CREAT | O_TRUNC,0644);
+     snprintf(ch_buff,buff_sz,"mode1:\n");
+     write(fd,ch_buff,strlen(ch_buff));
      node** node_arr=(node**) malloc(max_nds*sizeof(node*));
      unsigned int* nds_td0=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int* nds_td_rem=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int* nds_td2=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
-     struct nd_data* mrg=NULL;/*set to NULL to safely use free(mrg) even if mrg is not allocated;*/
-     unsigned int mrg_sz=0;
-     double *sums=(double*)malloc(nds_n*sizeof(double));
+     struct nd_data* curr_mrg=(struct nd_data*) malloc(1*sizeof(struct nd_data));
+     unsigned int* offsets; unsigned int ofst_n=0;
+     (void)val;//not really needed for write part, but used to get rid of "parameter ‘val’ set but not used" warning;
+     (void)vl;
+     (void)mode3_inp; (void)rw; (void)cl; (void)ln; (void)out_fl;
 
      
      node* node_mem=(node*) malloc(max_nds*sizeof(node));//for better cache locality;
      node* node_hd=&(node_mem[0]);
      node_hd->num=col[0]; node_hd->cap=min_cap;
      node_hd->nums=(unsigned int*)malloc(node_hd->cap*sizeof(unsigned int));
-     node_hd->vals=(double*)malloc(node_hd->cap*sizeof(double));
      node* curr_node=node_hd;
      node_arr[0]=curr_node;
      for(unsigned int i=col[0]+1;i<=col[len-1];i++){//assumption here is that node numbering is sequential without skipping the numbers;
@@ -83,7 +68,6 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
           node_arr[i-1]->num=i;
           node_arr[i-1]->cap=min_cap;
           node_arr[i-1]->nums=(unsigned int*)malloc(node_arr[i-1]->cap*sizeof(unsigned int));
-          node_arr[i-1]->vals=(double*)malloc(node_arr[i-1]->cap*sizeof(double));
           node_arr[i-2]->next=node_arr[i-1];
      }
      node_arr[col[len-1]-1]->next=NULL;
@@ -98,11 +82,9 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
                if(node_arr[col[i-1]-1]->n>node_arr[col[i-1]-1]->cap){
                     node_arr[col[i-1]-1]->cap=min(max(node_arr[col[i-1]-1]->n,2*node_arr[col[i-1]-1]->cap),max_cap);
                     node_arr[col[i-1]-1]->nums=(unsigned int*)realloc(node_arr[col[i-1]-1]->nums,node_arr[col[i-1]-1]->cap*sizeof(unsigned int));
-                    node_arr[col[i-1]-1]->vals=(double*)realloc(node_arr[col[i-1]-1]->vals,node_arr[col[i-1]-1]->cap*sizeof(double));
                }
                for(unsigned int j=i0;j<i;j++){
                     node_arr[col[i-1]-1]->nums[j-i0]=row[j];
-                    node_arr[col[i-1]-1]->vals[j-i0]=val[j];
                
                }
                i0=i;
@@ -115,15 +97,14 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      if(node_arr[max_nds-1]->n>node_arr[max_nds-1]->cap){
           node_arr[max_nds-1]->cap=min(max(node_arr[max_nds-1]->n,2*node_arr[max_nds-1]->cap),max_cap);
           node_arr[max_nds-1]->nums=(unsigned int*)realloc(node_arr[max_nds-1]->nums,node_arr[max_nds-1]->cap*sizeof(unsigned int));
-          node_arr[max_nds-1]->vals=(double*)realloc(node_arr[max_nds-1]->vals,node_arr[max_nds-1]->cap*sizeof(double));
      }
      for(unsigned int j=i0;j<len;j++){
           node_arr[max_nds-1]->nums[j-i0]=row[j];
-          node_arr[max_nds-1]->vals[j-i0]=val[j];
      
      }
      /////////////////////////////////////at this point edges should be set up too;
-     
+     curr_mrg->cap=node_arr[0]->cap;
+     curr_mrg->nums=(unsigned int*) malloc(curr_mrg->cap*sizeof(unsigned int));
      
      
      
@@ -133,7 +114,6 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
           nds_td2[i]=nds_td[i];
      
      }
-     
      double curr_thr_koef=0;
      while(1/*dbg_cnt<dbg_max*/){
      for(unsigned int i=0;i<max_nds;i++){
@@ -159,8 +139,6 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
                     }
                
                }
-               
-               
                i++;
           }
           
@@ -180,7 +158,7 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      }
      if(nds_n0>=1) curr_thr_koef=(nds_n0+0.)/(nds_n0+nds_n_rem);
      if(nds_n0<=1 || curr_thr_koef<thr_koef){
-          fprintf(fp,"\nnds_n0=%d\n",nds_n0);
+          write(fd,&nds_n0,sizeof(unsigned int));
           
           break;
      
@@ -190,53 +168,82 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      
      unsigned int n1;
      unsigned int bf_mg_cnt=0;
-     unsigned int *ui_ptr; unsigned int ui_val; double* d_ptr;
-     for(unsigned int i=0;i<nds_n0;i++){
-          sums[i]=0;
-          node* node_pivot=node_arr[nds_td0[i]-1];
-          for(unsigned int j=0;j<node_pivot->n;j++){
-               sums[i]+=node_pivot->vals[j];
-               
-          
+     unsigned int *ui_ptr; unsigned int ui_val;
+     if(ofst_n<(nds_n0+1)){
+          if(ofst_n>0){
+               free(offsets);//reallocate the buffer, but no need to copy old data;
           }
+          offsets=(unsigned int*) malloc((nds_n0+1)*sizeof(unsigned int));//(nds_n0+0) because offsets in files need to hold offests for each block plus the end offset (to determine size); first offset is 0;
+          ofst_n=nds_n0+1;
+     
      }
-     if(mrg_sz<min(nds_n0,(unsigned int)omp_get_max_threads())){//nds_n0 should be bigest on the first iteration (since the original graph is more sparce, and all node deletion operation make it more dense, bigger set of indipendent (no common neighbours) nodes expected in the beginning), hence this condition should be true only on the first (or on several first) iterations;
-          if(mrg_sz!=0){
-               for(unsigned int i=0;i<mrg_sz;i++){//allocator malloc and free are thread safe, but not necessary faster in parallel; mrg_sz is not expected to be large;
-                    free(mrg[i].nums); free(mrg[i].vals);
-               }
-               free(mrg);
+     write(fd,&nds_n0,sizeof(unsigned int));
+     offsets[0]=0;
+     for(unsigned int i=1;i<=nds_n0;i++){
+          unsigned int neighb_sz=node_arr[nds_td0[i-1]-1]->n;
+          offsets[i]=offsets[i-1]+(2*neighb_sz+1)*sizeof(unsigned int);//the format: first number is number of neighbours for given node; then 2*neib_sz are pairs of node numbers to collect sum (edges from n0 to its neibhbours);
+          offsets[i]+=(3*(neighb_sz*(neighb_sz-1)))*sizeof(unsigned int);//the format: after that there are blocks of 3 pairs of numbers. Each block is used to create or update an edge. For expample, if pivot node is n0, and we need to create an edge between its neighbours n1 and n2, (assuming n0<n1<n2), first and second pair are (n0,n1) and (n0,n2). They are used to show which edges to take. Third pair is (n1,n2) is used to show which edge is to create (update). The pairs should be ordered (smaller, bigger) for convenience for reading (since the graph is symmetrical, only half the graph is needed to be stored).
+          //Total nuber of such triples is the nuber of all new edges created (neighb_sz*(neighb_sz-1)) divided by 2 (only half of graph need to be stored):  (3*2)*(neighb_sz*(neighb_sz-1))/2=(3*(neighb_sz*(neighb_sz-1)));
           
-          }
-          mrg_sz=min(nds_n0,(unsigned int) omp_get_max_threads());
-          mrg=(struct nd_data*) malloc(mrg_sz*sizeof(struct nd_data));
-          for(unsigned int i=0;i<mrg_sz;i++){
-               mrg[i].cap=min((2*node_arr[nds_td0[i]-1]->cap),max_cap);
-               mrg[i].nums=(unsigned int*) malloc(mrg[i].cap*sizeof(unsigned int));
-               mrg[i].vals=(double*) malloc(mrg[i].cap*sizeof(double));
           
-          }
           
      
      }
-     #pragma omp parallel for schedule(static) num_threads((nds_n0<=(unsigned int)omp_get_max_threads())?nds_n0:(unsigned int)omp_get_max_threads()) private(n1,bf_mg_cnt,ui_val,ui_ptr,d_ptr) if(max_nds>2*64*64+64+1)
+     write(fd,offsets,(nds_n0+1)*sizeof(unsigned int));
+     
+     
+     
+     
      for(unsigned int i=0;i<nds_n0;i++){
-          struct nd_data* curr_mrg=&(mrg[omp_get_thread_num()]);
-          for(unsigned int j=0;j<node_arr[nds_td0[i]-1]->n;j++){
-               n1=node_arr[nds_td0[i]-1]->nums[j];
-               double cache_scl=node_arr[nds_td0[i]-1]->vals[j]/sums[i];
+          node* nd_pivot=node_arr[nds_td0[i]-1];
+          unsigned int curr_uint=nd_pivot->n;
+          write(fd,&curr_uint,sizeof(unsigned int));
+          for(unsigned int j=0;j<nd_pivot->n;j++){
+               if(nd_pivot->num<nd_pivot->nums[j]){
+                    write(fd,&(nd_pivot->num),sizeof(unsigned int));
+                    write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
+               }
+               else{
+                    write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
+                    write(fd,&(nd_pivot->num),sizeof(unsigned int));
+               }
+          
+          }//edges to calculate sum;
+          
+          for(unsigned int j=0;j<nd_pivot->n;j++){//for writing we need to iterate untill j<nd_pivot->n-1,but for graph update, we still need to process (nd_pivot->n-1)-th node too;
+               for(unsigned int k=j+1;k<nd_pivot->n;k++){
+                    if(nd_pivot->num < nd_pivot->nums[j]){
+                         write(fd,&(nd_pivot->num),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->num),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->nums[k]),sizeof(unsigned int));
+                    }
+                    else if(nd_pivot->num > nd_pivot->nums[j] && nd_pivot->num < nd_pivot->nums[k]){
+                         write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->num),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->num),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->nums[k]),sizeof(unsigned int));
+                    }
+                    else{
+                         write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->num),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->nums[k]),sizeof(unsigned int));
+                         write(fd,&(nd_pivot->num),sizeof(unsigned int));
+                    }
+                    write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
+                    write(fd,&(nd_pivot->nums[k]),sizeof(unsigned int));
+               }
+               n1=nd_pivot->nums[j];
                bf_mg_cnt=0;
-               if(curr_mrg->cap<min((node_arr[n1-1]->n + node_arr[nds_td0[i]-1]->n),max_nds-1)){
-                    curr_mrg->cap=min(max(node_arr[n1-1]->n+node_arr[nds_td0[i]-1]->n,2*curr_mrg->cap),max_nds-1);
-                    free(curr_mrg->nums); free(curr_mrg->vals);
+               if(curr_mrg->cap<min((node_arr[n1-1]->n + nd_pivot->n),max_nds-1)){
+                    curr_mrg->cap=min(max(node_arr[n1-1]->n+nd_pivot->n,2*curr_mrg->cap),max_nds-1);
+                    free(curr_mrg->nums);
                     curr_mrg->nums=(unsigned int*) malloc(curr_mrg->cap*sizeof(unsigned int));
-                    curr_mrg->vals=(double*) malloc(curr_mrg->cap*sizeof(double));//no need to keep (copy during realloc) old data;
-                    
                
                }
                unsigned int ll=0,qq=0;
-               for(; ll<node_arr[n1-1]->n && qq<node_arr[nds_td0[i]-1]->n;){
-                    if(node_arr[nds_td0[i]-1]->nums[qq]==n1){//skip node from the list of neighbourds of the node to delete that has same index as the neighbout itself (form edges with all pivot's neighbours except itself);
+               for(; ll<node_arr[n1-1]->n && qq<nd_pivot->n;){
+                    if(nd_pivot->nums[qq]==n1){//skip node from the list of neighbourds of the node to delete that has same index as the neighbout itself (form edges with all pivot's neighbours except itself);
                          qq++; continue;
                     
                     }
@@ -244,20 +251,17 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
                          ll++; continue;
                     
                     }
-                    if(node_arr[n1-1]->nums[ll] == node_arr[nds_td0[i]-1]->nums[qq]){//edge exists, parralel conductances are added;
+                    if(node_arr[n1-1]->nums[ll] == nd_pivot->nums[qq]){//edge exists, parralel conductances are added;
                          curr_mrg->nums[bf_mg_cnt]=node_arr[n1-1]->nums[ll];
-                         curr_mrg->vals[bf_mg_cnt]=node_arr[n1-1]->vals[ll]+cache_scl*node_arr[nds_td0[i]-1]->vals[qq];//(node_arr[nds_td0[i]-1]->vals[j]*node_arr[nds_td0[i]-1]->vals[qq])/sums[i];
                          bf_mg_cnt++; ll++; qq++;
                     }
-                    else if(node_arr[n1-1]->nums[ll] < node_arr[nds_td0[i]-1]->nums[qq]){//record old edge;
+                    else if(node_arr[n1-1]->nums[ll] < nd_pivot->nums[qq]){//record old edge;
                          curr_mrg->nums[bf_mg_cnt]=node_arr[n1-1]->nums[ll];
-                         curr_mrg->vals[bf_mg_cnt]=node_arr[n1-1]->vals[ll];
                          bf_mg_cnt++; ll++;
                     
                     }
                     else{//calculate and recocrd new edge;
-                         curr_mrg->nums[bf_mg_cnt]=node_arr[nds_td0[i]-1]->nums[qq];
-                         curr_mrg->vals[bf_mg_cnt]=cache_scl*node_arr[nds_td0[i]-1]->vals[qq];
+                         curr_mrg->nums[bf_mg_cnt]=nd_pivot->nums[qq];
                          bf_mg_cnt++; qq++;
                          
                     }
@@ -269,19 +273,17 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
                     }
                     else{
                          curr_mrg->nums[bf_mg_cnt]=node_arr[n1-1]->nums[ll];
-                         curr_mrg->vals[bf_mg_cnt]=node_arr[n1-1]->vals[ll];
                          bf_mg_cnt++; ll++;
                     }
                
                }
-               while(qq<node_arr[nds_td0[i]-1]->n){
-                    if(node_arr[nds_td0[i]-1]->nums[qq]==n1){
+               while(qq<nd_pivot->n){
+                    if(nd_pivot->nums[qq]==n1){
                          qq++; continue;
                     
                     }
                     else{
-                         curr_mrg->nums[bf_mg_cnt]=node_arr[nds_td0[i]-1]->nums[qq];
-                         curr_mrg->vals[bf_mg_cnt]=cache_scl*node_arr[nds_td0[i]-1]->vals[qq];
+                         curr_mrg->nums[bf_mg_cnt]=nd_pivot->nums[qq];
                          bf_mg_cnt++; qq++;
                     
                     }
@@ -289,8 +291,9 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
                }
                ui_val=node_arr[n1-1]->cap; node_arr[n1-1]->cap=curr_mrg->cap; curr_mrg->cap=ui_val;
                ui_ptr=node_arr[n1-1]->nums; node_arr[n1-1]->nums=curr_mrg->nums; curr_mrg->nums=ui_ptr;
-               d_ptr=node_arr[n1-1]->vals; node_arr[n1-1]->vals=curr_mrg->vals; curr_mrg->vals=d_ptr;
                node_arr[n1-1]->n=bf_mg_cnt;
+               
+               
           
           }
      
@@ -304,7 +307,6 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      for(unsigned int i=0; i<nds_n0 && curr_node!=NULL;){
           if(curr_node->num==nds_td0[i]){
                free(curr_node->nums);
-               free(curr_node->vals);
                node_arr[curr_node->num-1]=NULL;
                if(prev_node==NULL){
                     node_hd=curr_node->next;
@@ -333,22 +335,19 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      nds_n2=nds_n_rem; nds_n0=0; nds_n_rem=0;
      }
      
-     if(out_fl==1){
+     /*if(out_fl==1){//ouput after mode1
+          snprintf(ch_buff,buff_sz,"mode1_out:\n");
+          write(fd,ch_buff,strlen(ch_buff));
           *ln=0;
           for(curr_node=node_hd;curr_node!=NULL;curr_node=curr_node->next){
                *ln+=curr_node->n;
           
           }
-          (*cl)=(unsigned int*) malloc((*ln)*sizeof(unsigned int));
-          (*rw)=(unsigned int*) malloc((*ln)*sizeof(unsigned int));
-          (*vl)=(double*) malloc((*ln)*sizeof(double));
-          unsigned int cnt_out=0;
+          write(fd,ln,sizeof(unsigned int));
           for(curr_node=node_hd;curr_node!=NULL;curr_node=curr_node->next){
                for(unsigned int i=0;i<curr_node->n;i++){
-                    (*cl)[cnt_out]=curr_node->num;
-                    (*rw)[cnt_out]=curr_node->nums[i];
-                    (*vl)[cnt_out]=curr_node->vals[i];
-                    cnt_out++;
+                    write(fd,&(curr_node->num),sizeof(unsigned int));
+                    write(fd,&(curr_node->nums[i]),sizeof(unsigned int));
                     
                
                }
@@ -356,13 +355,11 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
           }
           free(nds_td0);
           free(nds_td_rem);
-          free(sums);
           node* prev_node=NULL;
           for(curr_node=node_hd;curr_node!=NULL;){
                prev_node=curr_node;
                curr_node=curr_node->next;
                free(prev_node->nums);
-               free(prev_node->vals);
                
             
           
@@ -372,29 +369,26 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
           
           
      }
-     else{
+     else{//continue to mode2
           out_fl--;
-          mode_2_alg(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,fp);
+          //mode_2_alg(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,NULL);
           free(nds_td0);
           free(nds_td_rem);
-          free(sums);
           free(node_arr);
           
           
      
      
-     }
+     }*/
      
      
      free(node_mem);
      free(nds_td2);
-     for(unsigned int i=0;i<mrg_sz;i++){
-          free(mrg[i].nums);
-          free(mrg[i].vals);
-     }
-     free(mrg);
+     free(curr_mrg->nums);
+     free(curr_mrg);
+     free(offsets);
      
-     fclose(fp);
+     close(fd);
      
 
 }

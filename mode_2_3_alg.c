@@ -55,7 +55,6 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           unsigned int n0=nds_td[i],n1;
           node* nd0=node_arr[nds_td[i]-1];
           
-          //#pragma omp parallel for schedule(static) reduction(+:sum)//tested;
           for(unsigned int j=0;j<nd0->n;j++){
                sum+=nd0->vals[j];
           }
@@ -97,7 +96,7 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                     }
                     if(nd0->nums[q]==nd1->nums[w]){
                          curr_mrg->nums[mrg_cnt]=nd1->nums[w];
-                         curr_mrg->vals[mrg_cnt]=nd1->vals[w]+cache_scl*nd0->vals[q];//(nd0->vals[j]*nd0->vals[q])/sum;
+                         curr_mrg->vals[mrg_cnt]=nd1->vals[w]+cache_scl*nd0->vals[q];
                          mrg_cnt++;
                          q++; w++;
                     }
@@ -179,9 +178,6 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           }
      
      }
-     /*free(mrg->nums);
-     free(mrg->vals);
-     free(mrg);*/
      for(unsigned int i=0;i<mrg_sz;i++){
           if(mrg[i].cap>0){
                free(mrg[i].nums); free(mrg[i].vals);
@@ -189,11 +185,6 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
      
      }
      free(mrg);
-     if(out_fl==1){
-          ////if(fp!=NULL) fprintf(fp,"\nnodes processed: %u",nds_n);
-          //printf("\ntotal time: %llu",dt_time);
-     
-     }
      if(out_fl==1){
           *ln=0;
           for(curr_node=node_hd;curr_node!=NULL;curr_node=curr_node->next){
@@ -221,7 +212,6 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                curr_node=curr_node->next;
                free(prev_node->nums);
                free(prev_node->vals);
-               //free(prev_node);
           
           }
           
@@ -240,8 +230,6 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           dt_time=0;
           out_fl=1;
           num_thr=*(mode3_inp->n_th);
-          //fprintf(fp,"\n\nmode3; num_thr=,%d\n",num_thr);
-          //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           #pragma omp parallel for schedule(static) num_threads((num_thr<=omp_get_max_threads())?num_thr:omp_get_max_threads()) private(curr_node,prev_node) if((mode3_inp->tgt_n1>=64 && mode3_inp->max_m_sz>3) || mode3_inp->tgt_n1>64)
           for(unsigned int i=0;i<(*(mode3_inp->n_th));i++){
                node** node_arr0=(node**) malloc(max_nds*sizeof(node*));
@@ -289,9 +277,6 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                
                }
                node* node_hd0=node_arr0[0];
-               //out_fl=1;
-               //clock_gettime(CLOCK_MONOTONIC,&curr_time);
-               //dt_time+=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
                
                mode_2_alg(node_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL,node_hd->num-1,NULL);
                free(node_arr0);
@@ -302,16 +287,12 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                
           
           }
-          //clock_gettime(CLOCK_MONOTONIC,&curr_time);
-          //dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
-          ///////fprintf(fp,"%llu,%d,%d",dt_time,(mode3_inp->max_m_sz),(*(mode3_inp->n_th)));
           
           for(curr_node=node_hd;curr_node!=NULL;){
                prev_node=curr_node;
                curr_node=curr_node->next;
                free(prev_node->nums);
                free(prev_node->vals);
-               //free(prev_node);
           
           }
      

@@ -364,13 +364,51 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
           unsigned int out_fl=3;
           if(max_m_sz>=nds_n1) out_fl=2;
           if(out_fl<3){
-               (*rw_)=(unsigned int**)malloc(1*sizeof(unsigned int*));
-		     (*cl_)=(unsigned int**)malloc(1*sizeof(unsigned int*));
-		     (*vl_)=(double**)malloc(1*sizeof(double*));
+               (*rw_)=(unsigned int**)malloc(2*sizeof(unsigned int*));
+		     (*cl_)=(unsigned int**)malloc(2*sizeof(unsigned int*));
+		     (*vl_)=(double**)malloc(2*sizeof(double*));
 		     (*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
+		     unsigned int len1=0;
+               out_fl=1;
+               struct timespec curr_time; long long unsigned int tick,dt_time;
+               clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
                mode_1_alg(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,th_nb_koef,out_fl,NULL);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
-               (*ln_)[0]=len0;
+               clock_gettime(CLOCK_MONOTONIC,&curr_time);
+               dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+               printf("\nmode_1_online=%llu\n",dt_time);
+               clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+               mode_1_alg_offline_w(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,th_nb_koef,out_fl,NULL,m_dim,n_dim);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
+               clock_gettime(CLOCK_MONOTONIC,&curr_time);
+               dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+               printf("mode_1_w=%llu\n",dt_time);
+               clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+               mode_1_alg_offline_r(row,&((*rw_)[1]),col,&((*cl_)[1]),val,&((*vl_)[1]),*len,&len1, nds_td,*nds_n,th_nb_koef,out_fl,NULL,m_dim,n_dim);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
+               clock_gettime(CLOCK_MONOTONIC,&curr_time);
+               dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
+               printf("\nmode_1_r=%llu\n",dt_time);
+               /*(*ln_)[0]=len0;
                (*n_th)=1;
+               double tot_diff=0;
+               if(len0!=len1){
+                    printf("\n%u!=%u",len0,len1);
+               
+               }
+               else{
+                    for(unsigned int i=0;i<len0;i++){
+                         if((*cl_)[0][i]!=(*cl_)[1][i] || (*rw_)[0][i]!=(*rw_)[1][i]){
+                              printf("\ni=%u, (*cl_)[0][i]=%u, (*cl_)[1][i]=%u, (*rw_)[0][i]=%u, (*rw_)[1][i]=%u",i,(*cl_)[0][i], (*cl_)[1][i], (*rw_)[0][i], (*rw_)[1][i]);
+                         
+                         }
+                         else{
+                              tot_diff+=fabs((*vl_)[0][i]-(*vl_)[1][i]);
+                         
+                         }
+                    
+                    }
+               
+               }
+               if(tot_diff>1e-5) printf("\ntot_diff=%e",tot_diff);*/
+               
           
           }
           else{
