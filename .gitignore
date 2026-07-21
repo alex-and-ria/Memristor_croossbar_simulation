@@ -47,6 +47,8 @@ tst_tmp*
 tst_fast*
 !/OpenMP_timing/**/*
 
+mode1_*x*
+
 
 
 

@@ -37,7 +37,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-
+#include"mode_2_alg_w.c"
 void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n){
      unsigned int max_nds=col[len-1];
      unsigned int min_cap=64, max_cap=max_nds-1;
@@ -52,6 +52,9 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
      unsigned int* nds_td2=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      struct nd_data* curr_mrg=(struct nd_data*) malloc(1*sizeof(struct nd_data));
      unsigned int* offsets; unsigned int ofst_n=0;
+     unsigned int max_offst_elm=0;//find the maximum buffer need to store biggest neighbour list and additionally its size and pivot number;
+     off_t curr_fl_pos=lseek(fd, 0, SEEK_CUR);
+     write(fd,&max_offst_elm,sizeof(unsigned int));//write as placeholder; when calculate maximum offset size in bytes, write it at same ofset;
      (void)val;//not really needed for write part, but used to get rid of "parameter ‘val’ set but not used" warning;
      (void)vl;
      (void)mode3_inp; (void)rw; (void)cl; (void)ln; (void)out_fl;
@@ -158,7 +161,8 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
      }
      if(nds_n0>=1) curr_thr_koef=(nds_n0+0.)/(nds_n0+nds_n_rem);
      if(nds_n0<=1 || curr_thr_koef<thr_koef){
-          write(fd,&nds_n0,sizeof(unsigned int));
+          nds_n0=0;
+          write(fd,&nds_n0,sizeof(unsigned int));//use zero as delimiter to signify transition to the next mode (mode2 or to output);
           
           break;
      
@@ -181,24 +185,23 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
      offsets[0]=0;
      for(unsigned int i=1;i<=nds_n0;i++){
           unsigned int neighb_sz=node_arr[nds_td0[i-1]-1]->n;
-          offsets[i]=offsets[i-1]+(2*neighb_sz+1)*sizeof(unsigned int);//the format: first number is number of neighbours for given node; then 2*neib_sz are pairs of node numbers to collect sum (edges from n0 to its neibhbours);
-          offsets[i]+=(3*(neighb_sz*(neighb_sz-1)))*sizeof(unsigned int);//the format: after that there are blocks of 3 pairs of numbers. Each block is used to create or update an edge. For expample, if pivot node is n0, and we need to create an edge between its neighbours n1 and n2, (assuming n0<n1<n2), first and second pair are (n0,n1) and (n0,n2). They are used to show which edges to take. Third pair is (n1,n2) is used to show which edge is to create (update). The pairs should be ordered (smaller, bigger) for convenience for reading (since the graph is symmetrical, only half the graph is needed to be stored).
+          offsets[i]=offsets[i-1]+(neighb_sz+2)*sizeof(unsigned int);//the format: first number is number of neighbours for given node; second number is a pivot, after that stored numbers of neighbours of pivot;
+          //offsets[i]=offsets[i-1]+(2*neighb_sz+1)*sizeof(unsigned int);//the format: first number is number of neighbours for given node; then 2*neib_sz are pairs of node numbers to collect sum (edges from n0 to its neibhbours);
+          //offsets[i]+=(3*(neighb_sz*(neighb_sz-1)))*sizeof(unsigned int);//the format: after that there are blocks of 3 pairs of numbers. Each block is used to create or update an edge. For expample, if pivot node is n0, and we need to create an edge between its neighbours n1 and n2, (assuming n0<n1<n2), first and second pair are (n0,n1) and (n0,n2). They are used to show which edges to take. Third pair is (n1,n2) is used to show which edge is to create (update). The pairs should be ordered (smaller, bigger) for convenience for reading (since the graph is symmetrical, only half the graph is needed to be stored).
           //Total nuber of such triples is the nuber of all new edges created (neighb_sz*(neighb_sz-1)) divided by 2 (only half of graph need to be stored):  (3*2)*(neighb_sz*(neighb_sz-1))/2=(3*(neighb_sz*(neighb_sz-1)));
-          
+          if(max_offst_elm<(neighb_sz+2)) max_offst_elm=(neighb_sz+2);
           
           
      
      }
      write(fd,offsets,(nds_n0+1)*sizeof(unsigned int));
      
-     
-     
-     
      for(unsigned int i=0;i<nds_n0;i++){
           node* nd_pivot=node_arr[nds_td0[i]-1];
-          unsigned int curr_uint=nd_pivot->n;
-          write(fd,&curr_uint,sizeof(unsigned int));
-          for(unsigned int j=0;j<nd_pivot->n;j++){
+          write(fd,&(nd_pivot->n),sizeof(unsigned int));
+          write(fd,&(nd_pivot->num),sizeof(unsigned int));
+          write(fd,nd_pivot->nums,(nd_pivot->n)*sizeof(unsigned int));
+          /*for(unsigned int j=0;j<nd_pivot->n;j++){
                if(nd_pivot->num<nd_pivot->nums[j]){
                     write(fd,&(nd_pivot->num),sizeof(unsigned int));
                     write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
@@ -209,9 +212,9 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
                }
           
           }//edges to calculate sum;
-          
+          */
           for(unsigned int j=0;j<nd_pivot->n;j++){//for writing we need to iterate untill j<nd_pivot->n-1,but for graph update, we still need to process (nd_pivot->n-1)-th node too;
-               for(unsigned int k=j+1;k<nd_pivot->n;k++){
+               /*for(unsigned int k=j+1;k<nd_pivot->n;k++){
                     if(nd_pivot->num < nd_pivot->nums[j]){
                          write(fd,&(nd_pivot->num),sizeof(unsigned int));
                          write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
@@ -232,7 +235,7 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
                     }
                     write(fd,&(nd_pivot->nums[j]),sizeof(unsigned int));
                     write(fd,&(nd_pivot->nums[k]),sizeof(unsigned int));
-               }
+               }*/
                n1=nd_pivot->nums[j];
                bf_mg_cnt=0;
                if(curr_mrg->cap<min((node_arr[n1-1]->n + nd_pivot->n),max_nds-1)){
@@ -335,9 +338,10 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
      nds_n2=nds_n_rem; nds_n0=0; nds_n_rem=0;
      }
      
-     /*if(out_fl==1){//ouput after mode1
-          snprintf(ch_buff,buff_sz,"mode1_out:\n");
-          write(fd,ch_buff,strlen(ch_buff));
+     if(out_fl==1){//ouput after mode1
+          //to improve speed, and minimize output file size, do not signify transition with char* buffers; it is now responsibility of a reader to read correct file (with proper setting of out_fl);
+          //snprintf(ch_buff,buff_sz,"mode1_out:\n");
+          //write(fd,ch_buff,strlen(ch_buff));
           *ln=0;
           for(curr_node=node_hd;curr_node!=NULL;curr_node=curr_node->next){
                *ln+=curr_node->n;
@@ -371,7 +375,7 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
      }
      else{//continue to mode2
           out_fl--;
-          //mode_2_alg(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,NULL);
+          mode_2_alg_w(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,fd,&max_offst_elm);
           free(nds_td0);
           free(nds_td_rem);
           free(node_arr);
@@ -379,7 +383,7 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
           
      
      
-     }*/
+     }
      
      
      free(node_mem);
@@ -388,8 +392,12 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
      free(curr_mrg);
      free(offsets);
      
+     pwrite(fd, &max_offst_elm,sizeof(unsigned int),curr_fl_pos);//record size fo the biggest neighbour list;
      close(fd);
      
 
 }
+
+
+
 

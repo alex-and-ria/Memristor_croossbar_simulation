@@ -369,7 +369,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
 		     (*vl_)=(double**)malloc(2*sizeof(double*));
 		     (*ln_)=(unsigned int*)malloc(1*sizeof(unsigned int));
 		     unsigned int len1=0;
-               out_fl=1;
+               out_fl=2;
                struct timespec curr_time; long long unsigned int tick,dt_time;
                clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
                mode_1_alg(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,th_nb_koef,out_fl,NULL);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
@@ -386,7 +386,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
                clock_gettime(CLOCK_MONOTONIC,&curr_time);
                dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
                printf("\nmode_1_r=%llu\n",dt_time);
-               /*(*ln_)[0]=len0;
+               (*ln_)[0]=len0;
                (*n_th)=1;
                double tot_diff=0;
                if(len0!=len1){
@@ -407,7 +407,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
                     }
                
                }
-               if(tot_diff>1e-5) printf("\ntot_diff=%e",tot_diff);*/
+               if(tot_diff>1e-5) printf("\ntot_diffq=%e",tot_diff);
                
           
           }
