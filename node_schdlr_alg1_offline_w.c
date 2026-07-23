@@ -373,9 +373,9 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
           
           
      }
-     else{//continue to mode2
+     else{//continue to mode2 and mode3
           out_fl--;
-          mode_2_alg_w(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,fd,&max_offst_elm);
+          mode_2_alg_w(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,fd,&max_offst_elm,m,n);
           free(nds_td0);
           free(nds_td_rem);
           free(node_arr);

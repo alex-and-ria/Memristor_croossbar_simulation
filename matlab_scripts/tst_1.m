@@ -34,7 +34,7 @@ nds_td=1:2*m*n;
 
 
 
-max_m_sz=size(nds_tgt,2);
+max_m_sz=size(nds_tgt,2)/2;
 fprintf(f_id,"#define m_dim %u\n#define n_dim %u\n",m,n);
 fprintf(f_id,"#define fl_nm ""OpenMP_timing/OpenMP_tst_%dx%d_%d.csv""\n",m,n,jj);
 

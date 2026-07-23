@@ -30,7 +30,7 @@
 
 
 
-#include<stdio.h>
+#include<stdio.h>               
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -99,7 +99,7 @@ void mode_1_alg_offline_r(unsigned int *row,unsigned int** rw, unsigned int *col
 /*clock_gettime(CLOCK_MONOTONIC,&curr_time);
 dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
 printf(",rd_dt[thr_id] read=%llu",dt_time);*/
-               unsigned int* thr_data=rd_dt+fl_omp*i*max_offst_elm;
+               unsigned int* thr_data=rd_dt+fl_omp*omp_get_thread_num()*max_offst_elm;
                unsigned int neighb_sz=thr_data[0];
                unsigned int n0=thr_data[1];//n0 is a number of pivot node;
                unsigned int n1,n2,n1_min,n1_max,n2_min,n2_max;
@@ -218,19 +218,84 @@ clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll 
                free(out_buff);
           
           }
-          else{//TODO mode3;
+          else{//mode 3
+               unsigned int buff_sz=64; char ch_buff[buff_sz];
+               snprintf(ch_buff,buff_sz,"more_fold_%ux%u_%u",m,n,mode3_inp->max_m_sz);
+               int fd0=open(ch_buff, O_RDONLY);
+               (*(mode3_inp->n_th))=((mode3_inp->tgt_n1)%(mode3_inp->max_m_sz)==0)?(mode3_inp->tgt_n1)/(mode3_inp->max_m_sz):((mode3_inp->tgt_n1)/(mode3_inp->max_m_sz)+1);
+               unsigned int ui_n_th=(*(mode3_inp->n_th));
+               unsigned int ***rw=mode3_inp->rw; unsigned int ***cl=mode3_inp->cl; double ***vl=mode3_inp->vl;
+               (*rw)=(unsigned int**) malloc(ui_n_th*sizeof(unsigned int*));
+               (*cl)=(unsigned int**) malloc(ui_n_th*sizeof(unsigned int*));
+               (*vl)=(double**) malloc(ui_n_th*sizeof(double*));
+               (*(mode3_inp->ln))=(unsigned int*) malloc(ui_n_th*sizeof(unsigned int));
+               off_t* offsets=(off_t*) malloc((ui_n_th+1)*sizeof(off_t));
+               read(fd0,offsets,(ui_n_th+1)*sizeof(off_t));
+               for(unsigned int i=0;i<ui_n_th;i++){
+                    //unsigned int buff_n=(offsets[i+1]-offsets[i])/sizeof(unsigned int);
+                    unsigned int* m3_buff=(unsigned int*) malloc(offsets[i+1]-offsets[i]);//TODO check if not off by 1;
+                    pread(fd0,m3_buff,offsets[i+1]-offsets[i],offsets[i]);
+                    unsigned int cnt_j=0;
+                    unsigned int neighb_sz=m3_buff[cnt_j];
+                    unsigned int n0,n1,n2,n1_min,n1_max,n2_min,n2_max;
+                    double sum_inv=0; double scl_mult=0;
+                    while(neighb_sz!=0){
+                         sum_inv=0;
+                         n0=m3_buff[cnt_j+1];
+                         for(unsigned int k=0;k<neighb_sz;k++){
+                              n1=min(n0,m3_buff[cnt_j+2+k]);
+                              n2=max(n0,m3_buff[cnt_j+2+k]);
+                              sum_inv+=nd_arr[arr_ij(n1,n2)];
+                         
+                         }
+                         sum_inv=1/sum_inv;
+                         for(unsigned int k=0;k<neighb_sz-1;k++){
+                              n1=m3_buff[cnt_j+2+k]; n1_min=min(n0,n1); n1_max=max(n0,n1);
+                              scl_mult=nd_arr[arr_ij(n1_min,n1_max)]*sum_inv;
+                              for(unsigned int ll=k+1;ll<neighb_sz;ll++){
+                                   n2=m3_buff[cnt_j+2+ll];
+                                   n2_min=min(n0,n2); n2_max=max(n0,n2);
+                                   nd_arr[arr_ij(n1,n2)] += scl_mult * nd_arr[arr_ij(n2_min,n2_max)];
+                              }
+                              
+                              
+                         
+                         }
+                         cnt_j+=neighb_sz+2;
+                         neighb_sz=m3_buff[cnt_j];
+                    
+                    }
+                    cnt_j++;
+                    unsigned int curr_len=m3_buff[cnt_j];
+                    cnt_j++;
+                    (*(mode3_inp->ln))[i]=curr_len;
+                    (*cl)[i]=(unsigned int*) malloc(curr_len*sizeof(unsigned int));
+                    (*rw)[i]=(unsigned int*) malloc(curr_len*sizeof(unsigned int));
+                    (*vl)[i]=(double*) malloc(curr_len*sizeof(double));
+                    for(unsigned int j=0;j<curr_len;j++){//record output;
+                         n1=m3_buff[cnt_j+2*j];
+                         n2=m3_buff[cnt_j+2*j+1];
+                         (*cl)[i][j]=n1;
+                         (*rw)[i][j]=n2;
+                         n1_min=min(n1,n2); n2_max=max(n1,n2);
+                         (*vl)[i][j]=nd_arr[arr_ij(n1_min,n2_max)];
+                    
+                    }
+                    free(m3_buff);
+                    
           
+               }
+               
+               close(fd0);
+               //free(nds_td0);
+               //free(nds_td_rem);
+               //free(node_arr);
           }
-          //free(nds_td0);
-          //free(nds_td_rem);
-          //free(node_arr);
           
           
      
      
      }
-     
-     
      
      
      free(nd_arr);
