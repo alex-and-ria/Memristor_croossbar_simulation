@@ -39,8 +39,8 @@
 
 
 
-void mode_1_alg_offline_r(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n){
-     (void)rw; (void)cl; (void)vl; (void)ln; (void)nds_td; (void)nds_n; (void)thr_koef; (void)out_fl; (void)mode3_inp;//TODO OpenMP, nmap, mode3
+void mode_1_alg_offline_r(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n){
+     //TODO OpenMP, nmap, run in Matlab;  
      //struct timespec curr_time; long long unsigned int tick,dt_time;
      unsigned char fl_omp=0;
      unsigned int buff_sz=64; char ch_buff[buff_sz]; char buff_rd[buff_sz];
@@ -50,6 +50,7 @@ void mode_1_alg_offline_r(unsigned int *row,unsigned int** rw, unsigned int *col
      read(fd,buff_rd,strlen(ch_buff));
      if(strncmp(buff_rd,ch_buff,strlen(ch_buff))!=0){//'\0' was not writen in writer function;
           printf("%s!=%s\n",buff_rd,ch_buff);
+          close(fd);
           return;
      }
      unsigned int max_offst_elm;
@@ -229,15 +230,32 @@ clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll 
                (*cl)=(unsigned int**) malloc(ui_n_th*sizeof(unsigned int*));
                (*vl)=(double**) malloc(ui_n_th*sizeof(double*));
                (*(mode3_inp->ln))=(unsigned int*) malloc(ui_n_th*sizeof(unsigned int));
-               off_t* offsets=(off_t*) malloc((ui_n_th+1)*sizeof(off_t));
-               read(fd0,offsets,(ui_n_th+1)*sizeof(off_t));
+               unsigned int shift;
+               read(fd0,&shift,sizeof(unsigned int));//node_hd->num-1;
+               unsigned int max_nds0=max_nds-shift;
+               size_t* arr_i0=(size_t*) malloc(max_nds0*sizeof(size_t));//precalculated indexes for smaller subgraphs (after mode 1 and mode 2); input is just node number (start with 1 in Matlab indexing), so arr_i0[0] is not used (to simplify call, even if need to allocate extra memory);
+               for(unsigned int i=1;i<max_nds0;i++){
+                    arr_i0[i]=((i-1)*(2*(size_t)max_nds0-i))/2;
+               }
+               #define arr0_ij(i,j) (arr_i0[i]+(size_t)(j)-(i)-1)
+               off_t* offsets0=(off_t*) malloc((ui_n_th+1)*sizeof(off_t));
+               read(fd0,offsets0,(ui_n_th+1)*sizeof(off_t));
+               double** nd_arr00=(double**) malloc(ui_n_th*sizeof(double*));
                for(unsigned int i=0;i<ui_n_th;i++){
-                    //unsigned int buff_n=(offsets[i+1]-offsets[i])/sizeof(unsigned int);
-                    unsigned int* m3_buff=(unsigned int*) malloc(offsets[i+1]-offsets[i]);//TODO check if not off by 1;
-                    pread(fd0,m3_buff,offsets[i+1]-offsets[i],offsets[i]);
+                    //unsigned int buff_n=(offsets0[i+1]-offsets0[i])/sizeof(unsigned int);
+                    unsigned int* m3_buff=(unsigned int*) malloc(offsets0[i+1]-offsets0[i]);//TODO check if not off by 1;
+                    pread(fd0,m3_buff,offsets0[i+1]-offsets0[i],offsets0[i]);
                     unsigned int cnt_j=0;
                     unsigned int neighb_sz=m3_buff[cnt_j];
                     unsigned int n0,n1,n2,n1_min,n1_max,n2_min,n2_max;
+                    nd_arr00[i]=(double*) malloc((((size_t)max_nds0*(max_nds0-1))/2)*sizeof(double));
+                    for(unsigned int j=1;j<max_nds0;j++){
+                         for(unsigned int k=j+1;k<(max_nds0+1);k++){
+                              nd_arr00[i][arr0_ij(j,k)]=nd_arr[arr_ij((j+shift),(k+shift))];
+                         
+                         }
+                    
+                    }
                     double sum_inv=0; double scl_mult=0;
                     while(neighb_sz!=0){
                          sum_inv=0;
@@ -245,17 +263,17 @@ clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll 
                          for(unsigned int k=0;k<neighb_sz;k++){
                               n1=min(n0,m3_buff[cnt_j+2+k]);
                               n2=max(n0,m3_buff[cnt_j+2+k]);
-                              sum_inv+=nd_arr[arr_ij(n1,n2)];
+                              sum_inv+=nd_arr00[i][arr0_ij(n1,n2)];
                          
                          }
                          sum_inv=1/sum_inv;
                          for(unsigned int k=0;k<neighb_sz-1;k++){
                               n1=m3_buff[cnt_j+2+k]; n1_min=min(n0,n1); n1_max=max(n0,n1);
-                              scl_mult=nd_arr[arr_ij(n1_min,n1_max)]*sum_inv;
+                              scl_mult=nd_arr00[i][arr0_ij(n1_min,n1_max)]*sum_inv;
                               for(unsigned int ll=k+1;ll<neighb_sz;ll++){
                                    n2=m3_buff[cnt_j+2+ll];
                                    n2_min=min(n0,n2); n2_max=max(n0,n2);
-                                   nd_arr[arr_ij(n1,n2)] += scl_mult * nd_arr[arr_ij(n2_min,n2_max)];
+                                   nd_arr00[i][arr0_ij(n1,n2)] += scl_mult * nd_arr00[i][arr0_ij(n2_min,n2_max)];
                               }
                               
                               
@@ -275,18 +293,22 @@ clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll 
                     for(unsigned int j=0;j<curr_len;j++){//record output;
                          n1=m3_buff[cnt_j+2*j];
                          n2=m3_buff[cnt_j+2*j+1];
-                         (*cl)[i][j]=n1;
-                         (*rw)[i][j]=n2;
+                         (*cl)[i][j]=n1+shift;
+                         (*rw)[i][j]=n2+shift;
                          n1_min=min(n1,n2); n2_max=max(n1,n2);
-                         (*vl)[i][j]=nd_arr[arr_ij(n1_min,n2_max)];
+                         (*vl)[i][j]=nd_arr00[i][arr0_ij(n1_min,n2_max)];
                     
                     }
                     free(m3_buff);
+                    free(nd_arr00[i]);
                     
           
                }
+               free(nd_arr00);
+               free(arr_i0);
                
                close(fd0);
+               free(offsets0);
                //free(nds_td0);
                //free(nds_td_rem);
                //free(node_arr);

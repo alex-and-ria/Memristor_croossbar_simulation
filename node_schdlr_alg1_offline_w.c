@@ -38,7 +38,7 @@
 #include <unistd.h>
 
 #include"mode_2_alg_w.c"
-void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n){
+void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n){
      unsigned int max_nds=col[len-1];
      unsigned int min_cap=64, max_cap=max_nds-1;
      unsigned int buff_sz=64; char ch_buff[buff_sz];
@@ -55,9 +55,9 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
      unsigned int max_offst_elm=0;//find the maximum buffer need to store biggest neighbour list and additionally its size and pivot number;
      off_t curr_fl_pos=lseek(fd, 0, SEEK_CUR);
      write(fd,&max_offst_elm,sizeof(unsigned int));//write as placeholder; when calculate maximum offset size in bytes, write it at same ofset;
-     (void)val;//not really needed for write part, but used to get rid of "parameter ‘val’ set but not used" warning;
+     /*(void)val;//not really needed for write part, but used to get rid of "parameter ‘val’ set but not used" warning;
      (void)vl;
-     (void)mode3_inp; (void)rw; (void)cl; (void)ln; (void)out_fl;
+     (void)rw; (void)cl;*/
 
      
      node* node_mem=(node*) malloc(max_nds*sizeof(node));//for better cache locality;
@@ -342,12 +342,12 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
           //to improve speed, and minimize output file size, do not signify transition with char* buffers; it is now responsibility of a reader to read correct file (with proper setting of out_fl);
           //snprintf(ch_buff,buff_sz,"mode1_out:\n");
           //write(fd,ch_buff,strlen(ch_buff));
-          *ln=0;
+          unsigned int ln_curr=0;
           for(curr_node=node_hd;curr_node!=NULL;curr_node=curr_node->next){
-               *ln+=curr_node->n;
+               ln_curr+=curr_node->n;
           
           }
-          write(fd,ln,sizeof(unsigned int));
+          write(fd,&ln_curr,sizeof(unsigned int));
           for(curr_node=node_hd;curr_node!=NULL;curr_node=curr_node->next){
                for(unsigned int i=0;i<curr_node->n;i++){
                     write(fd,&(curr_node->num),sizeof(unsigned int));
@@ -375,7 +375,7 @@ void mode_1_alg_offline_w(unsigned int *row,unsigned int** rw, unsigned int *col
      }
      else{//continue to mode2 and mode3
           out_fl--;
-          mode_2_alg_w(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,fd,&max_offst_elm,m,n);
+          mode_2_alg_w(node_arr,nds_td2,nds_n2, node_hd,max_nds,out_fl,mode3_inp,fd,&max_offst_elm,m,n);
           free(nds_td0);
           free(nds_td_rem);
           free(node_arr);
