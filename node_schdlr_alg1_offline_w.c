@@ -55,9 +55,8 @@ void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len
      unsigned int max_offst_elm=0;//find the maximum buffer need to store biggest neighbour list and additionally its size and pivot number;
      off_t curr_fl_pos=lseek(fd, 0, SEEK_CUR);
      write(fd,&max_offst_elm,sizeof(unsigned int));//write as placeholder; when calculate maximum offset size in bytes, write it at same ofset;
-     /*(void)val;//not really needed for write part, but used to get rid of "parameter ‘val’ set but not used" warning;
-     (void)vl;
-     (void)rw; (void)cl;*/
+     //(void)val;//not really needed for write part, but used to get rid of "parameter ‘val’ set but not used" warning;
+ 
 
      
      node* node_mem=(node*) malloc(max_nds*sizeof(node));//for better cache locality;

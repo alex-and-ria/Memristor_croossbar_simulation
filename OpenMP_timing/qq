@@ -6,3 +6,44 @@
 for jj=1:10
 tst_1; system("cd .. && gcc tst.c -o tst_fast -O3 -march=native -fopenmp -DNDEBUG && ./tst_fast 0 0 0")
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+powers=2:3;
+for m=2.^powers
+     n=m;
+     fl_omp=0;
+     for jj=1:10
+          tst_1; system("cd .. && gcc tst.c -o tst_fast -O3 -march=native -fopenmp -DNDEBUG && ./tst_fast 0 0 0 >>openmp_0.csv") 
+     end
+     fl_omp=1;
+     for jj=1:10
+          tst_1; system("cd .. && gcc tst.c -o tst_fast -O3 -march=native -fopenmp -DNDEBUG && ./tst_fast 0 0 0 >>openmp_1.csv") 
+     end
+end
+
+
+
+=AVERAGE(A1:A10)
+=STDEV.S(A1:A10)

@@ -32,14 +32,14 @@
 
 
 
-m=4; n=m; batch_size=1;
+m=256; n=m; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
 [G_m,Ivec]=adj_to_lapl(G_adj,m,n,Vin);
-tic()
+%tic()
      [L,U,P]=lu(G_m);
-toc();
+%toc();
 tic()
      y=L\(P*Ivec);
 toc()
@@ -52,8 +52,7 @@ figure(2); spy(L);
 figure(3); spy(U);
 
 loadlibrary('../libnode_schr.so','../node_schr.h')
-libfunctions('libnode_schr','-full')
-mode='mode1_1';%mode1_1, mode1_2, mode2_2, mode3_0;
+%libfunctions('libnode_schr','-full')
 % mode 1, one iteration (4x4 crossbar);
 nds_td=1:2*m*n; [nds_td,nds_tgt]=pune_ntd(nds_td,m,n);
 
@@ -73,8 +72,8 @@ nds_td_p=libpointer('uint32Ptr',nds_td); nds_n=libpointer('uint32Ptr',length(nds
 nds_td1_p=libpointer('uint32Ptr',nds_tgt); nds_n1=length(nds_tgt); 
 n_th_p=libpointer('uint32Ptr',0);
 
-null_uip=libpointer('uint32Ptr');
-max_m_sz=nds_n1/2;%set 2 submatrixes for mode 3;
+%null_uip=libpointer('uint32Ptr');
+max_m_sz=nds_n1/8;%set 2 submatrixes for mode 3;
 
 calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      col_p,cl_vp,...
@@ -84,93 +83,159 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      0.,...%smaller the number for mode_1_2_3, the more mode 1 is utilized;
      nds_td1_p, nds_n1,...
      n_th_p,max_m_sz,...%set 2 submatrixes for mode 3;
-     2,0);%mode_1_2_3
+     2,0,...;%mode_1_2_3
+     m,n)
 
 setdatatype(len_pp.Value,'uint32Ptr',n_th_p.Value);
 
-%G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
+% G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
+% if(1)%n_th_p.Value>=1)%correctness check for mode 3;
+%      for(ii=0:(n_th_p.Value-1))
+%           rw_c=libpointer('uint32PtrPtr');
+%           cl_c=libpointer('uint32PtrPtr');
+%           vl_c=libpointer('doublePtrPtr');
+%           calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
+%                rw_c,cl_c,vl_c,ii);%store data in rw_c,cl_c,vl_c;
+%           setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value(ii+1));
+%           setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value(ii+1));
+%           setdatatype(vl_c.Value,'doublePtr',len_pp.Value(ii+1));
+%           G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
+%           [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
+%           [L,U,P]=lu(G_m); y=L\(P*Ivec0); x=U\y;
+%           nds_td1_tmp=[];
+%           nds_td1_tmp(1:ii*max_m_sz)=nds_tgt(1:ii*max_m_sz);
+%           if(ii~=(n_th_p.Value-1))
+%                nds_td1_tmp(ii*max_m_sz+1:nds_n1-max_m_sz)=nds_tgt((ii+1)*max_m_sz+1:nds_n1);
+%           end
+%           G_one_iter1=star_mesh_one_iter(G_one_iter,nds_td1_tmp);%node deletion in Matlab;
+%           figure(double(2*(ii+1))); spy(G_one_iter1);%resulting adjacency matrix (after Matlab implementation);
+%           figure(double(2*(ii+1)+1)); spy(G_one_iter1-G_iter)%difference with C result;
+%           sum(sum(abs(G_one_iter1-G_iter)))
+% 
+%           
+%           
+%           
+%           [Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);%ground truth approximation;
+%           sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
+%           max(abs(sol_diff(~isnan(x))))
+%      end
+% elseif(0)
+%      %q=calllib('libnode_schr','tst_pnt',33);
+%      rw_c=libpointer('uint32PtrPtr');
+%      cl_c=libpointer('uint32PtrPtr');
+%      vl_c=libpointer('doublePtrPtr');
+%      calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
+%           rw_c,cl_c,vl_c,0);%store data in rw_c,cl_c,vl_c;
+%      setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value);
+%      setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value);
+%      setdatatype(vl_c.Value,'doublePtr',len_pp.Value);
+% 
+%      %nds_td=[1, 6, 8, 9, 17, 23, 25, 31,...
+%      %     2, 7, 12, 21, 27,...
+%      %     3, 13, 19, 29
+%      %     ];%this is what nodes get deleted in first iteration of mode1 for 4x4 crossbar;
+% 
+%      %G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
+%      G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
+%      %figure(1); spy(G_one_iter);%resulting adjacency matrix (after Matlab implementation);
+%      %figure(2); spy(G_one_iter-G_iter)%difference with C result;
+%      %sum(sum(abs(G_one_iter-G_iter)))
+% 
+% 
+%      [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
+%      G_m00=G_m(cl_c.Value(1):end,cl_c.Value(1):end);
+%      Ivec00=Ivec0(cl_c.Value(1):end,1);
+%      tic();
+%           [L,U,P]=lu(G_m00);
+%      toc();
+%      
+%      tic();
+%           y=L\(P*Ivec00);
+%      toc();
+%      tic();
+%           x=U\y;
+%      toc();
+%      tic()
+%           x=G_m00\Ivec00;
+%      toc()
+%           
+%      
+%      %figure(4); spy(G_m00);
+%      %figure(5); spy(L);
+%      %figure(6); spy(U);
+%      %[Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);%ground truth approximation;
+%      %sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
+%      %max(abs(sol_diff(~isnan(x))))
+%      
+%      
+% end
+
+rw_c=libpointer('uint32PtrPtr');
+cl_c=libpointer('uint32PtrPtr');
+vl_c=libpointer('doublePtrPtr');
+calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
+          rw_c,cl_c,vl_c,0);%store data in rw_c,cl_c,vl_c;
+setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value(1));
+setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value(1));
+setdatatype(vl_c.Value,'doublePtr',len_pp.Value(1));
+%if mode 3 is used, all matrixes usually have same size, but 
+%    if rem(n,max_m_sz)~=0, then in the (n/max_m_sz+1)th output matrix
+%    would be smaller;
+G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
+[G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
+G_m0=G_m(any(G_m,2),any(G_m,1));
+Ivec00=Ivec0(any(Ivec0,2));
+agrtd_A=zeros(size(G_m0,1),size(G_m0,2),n_th_p.Value);%in 3D
+%    array display is going in third corrdinate
+agrtd_b=zeros(length(Ivec00),n_th_p.Value);
 
 
-if(0)%n_th_p.Value>=1)
-     for(ii=0:(n_th_p.Value-1))
-          rw_c=libpointer('uint32PtrPtr');
-          cl_c=libpointer('uint32PtrPtr');
-          vl_c=libpointer('doublePtrPtr');
-          calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
-               rw_c,cl_c,vl_c,ii);%store data in rw_c,cl_c,vl_c;
-          setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value(ii+1));
-          setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value(ii+1));
-          setdatatype(vl_c.Value,'doublePtr',len_pp.Value(ii+1));
-          G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
-          [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
-          [L,U,P]=lu(G_m); y=L\(P*Ivec0); x=U\y;
-          nds_td1_tmp=[];
-          nds_td1_tmp(1:ii*max_m_sz)=nds_tgt(1:ii*max_m_sz);
-          if(ii~=(n_th_p.Value-1))
-               nds_td1_tmp(ii*max_m_sz+1:nds_n1-max_m_sz)=nds_tgt((ii+1)*max_m_sz+1:nds_n1);
-          end
-          G_one_iter1=star_mesh_one_iter(G_one_iter,nds_td1_tmp);%node deletion in Matlab;
-          figure(double(2*(ii+1))); spy(G_one_iter);%resulting adjacency matrix (after Matlab implementation);
-          figure(double(2*(ii+1)+1)); spy(G_one_iter-G_iter)%difference with C result;
-          sum(sum(abs(G_one_iter1-G_iter)))
 
-          
-          
-          
-          [Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);%ground truth approximation;
-          sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
-          max(abs(sol_diff(~isnan(x))))
-     end
-elseif(1)
-     %q=calllib('libnode_schr','tst_pnt',33);
+
+
+for(ii=0:(n_th_p.Value-1))
      rw_c=libpointer('uint32PtrPtr');
      cl_c=libpointer('uint32PtrPtr');
      vl_c=libpointer('doublePtrPtr');
      calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
-          rw_c,cl_c,vl_c,0);%store data in rw_c,cl_c,vl_c;
-     setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value);
-     setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value);
-     setdatatype(vl_c.Value,'doublePtr',len_pp.Value);
-
-     %nds_td=[1, 6, 8, 9, 17, 23, 25, 31,...
-     %     2, 7, 12, 21, 27,...
-     %     3, 13, 19, 29
-     %     ];%this is what nodes get deleted in first iteration of mode1 for 4x4 crossbar;
-
-     %G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
+     rw_c,cl_c,vl_c,ii);%store data in rw_c,cl_c,vl_c;
+     setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value(ii+1));
+     setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value(ii+1));
+     setdatatype(vl_c.Value,'doublePtr',len_pp.Value(ii+1));
      G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
-     %figure(1); spy(G_one_iter);%resulting adjacency matrix (after Matlab implementation);
-     %figure(2); spy(G_one_iter-G_iter)%difference with C result;
-     %sum(sum(abs(G_one_iter-G_iter)))
-
-
      [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
-     G_m00=G_m(cl_c.Value(1):end,cl_c.Value(1):end);
-     Ivec00=Ivec0(cl_c.Value(1):end,1);
-     tic();
-          [L,U,P]=lu(G_m00);
-     toc();
-     
-     tic();
-          y=L\(P*Ivec00);
-     toc();
-     tic();
-          x=U\y;
-     toc();
-     tic()
-          x=G_m00\Ivec00;
-     toc()
-          
-     
-     %figure(4); spy(G_m00);
-     %figure(5); spy(L);
-     %figure(6); spy(U);
-     %[Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);%ground truth approximation;
-     %sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
-     %max(abs(sol_diff(~isnan(x))))
-     
+     G_m0=G_m(any(G_m,2),any(G_m,1));
+     Ivec00=Ivec0(any(Ivec0,2));
+     agrtd_A(1:size(G_m0,1),1:size(G_m0,2),ii+1)=G_m0;
+     agrtd_b(1:length(Ivec00),ii+1)=Ivec00;
+
+end
+
+c = parcluster('local');
+if isempty(gcp('nocreate'))
+     parpool(c.NumWorkers);%start parrallel poll here to avoid overhead for automatic
+     %    start on parfor; use c.NumWorkers to creates a pool of
+     %    maximum number of workers;
+
+end
+tic()
+parfor ii=1:n_th_p.Value
+     agrtd_A(:,:,ii)\agrtd_b(:,ii);
      
 end
+toc()
+
+
+tic()
+for ii=1:n_th_p.Value
+     agrtd_A(:,:,ii)\agrtd_b(:,ii);
+     
+end
+toc()
+%delete(gcp)
+max_m_sz
+
+
 
 calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
 %q=33;

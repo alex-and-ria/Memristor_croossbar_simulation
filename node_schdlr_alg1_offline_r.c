@@ -42,7 +42,7 @@
 void mode_1_alg_offline_r(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n){
      //TODO OpenMP, nmap, run in Matlab;  
      //struct timespec curr_time; long long unsigned int tick,dt_time;
-     unsigned char fl_omp=0;
+     //unsigned char fl_omp=0;
      unsigned int buff_sz=64; char ch_buff[buff_sz]; char buff_rd[buff_sz];
      snprintf(ch_buff,buff_sz,"mode1_%ux%u",m,n);
      int fd=open(ch_buff, O_RDONLY);
@@ -73,7 +73,7 @@ void mode_1_alg_offline_r(unsigned int *row,unsigned int** rw, unsigned int *col
      }
      unsigned int nds_n0;
      unsigned int* offsets=NULL; unsigned int ofst_n=0;
-     unsigned int rd_buff_sz=((fl_omp==0)?1:omp_get_max_threads());
+     unsigned int rd_buff_sz=((m<128 && n<128)?1:omp_get_max_threads());//run OpenMP for mode 1 if(m>=128 || n>=128);
      unsigned int* rd_dt=(unsigned int*)calloc(rd_buff_sz*max_offst_elm,sizeof(unsigned int));//allocate with calloc, so that free() on unused buffer is successful (free(null_ptr));
      
      
@@ -93,14 +93,14 @@ void mode_1_alg_offline_r(unsigned int *row,unsigned int** rw, unsigned int *col
           read(fd,offsets,(nds_n0+1)*sizeof(unsigned int));
           curr_fl_pos=lseek(fd, 0, SEEK_CUR);
           
-          
+          #pragma omp parallel for schedule(static) num_threads((nds_n0<=(unsigned int)omp_get_max_threads())?nds_n0:(unsigned int)omp_get_max_threads()) if(m>=128 || n>=128)
           for(unsigned int i=0;i<nds_n0;i++){
 //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;     */          
-               pread(fd, (rd_dt+fl_omp*omp_get_thread_num()*max_offst_elm),(offsets[i+1]-offsets[i]),curr_fl_pos+offsets[i]);
+               pread(fd, (rd_dt+omp_get_thread_num()*max_offst_elm),(offsets[i+1]-offsets[i]),curr_fl_pos+offsets[i]);
 /*clock_gettime(CLOCK_MONOTONIC,&curr_time);
 dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
 printf(",rd_dt[thr_id] read=%llu",dt_time);*/
-               unsigned int* thr_data=rd_dt+fl_omp*omp_get_thread_num()*max_offst_elm;
+               unsigned int* thr_data=rd_dt+omp_get_thread_num()*max_offst_elm;
                unsigned int neighb_sz=thr_data[0];
                unsigned int n0=thr_data[1];//n0 is a number of pivot node;
                unsigned int n1,n2,n1_min,n1_max,n2_min,n2_max;
@@ -241,6 +241,7 @@ clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll 
                off_t* offsets0=(off_t*) malloc((ui_n_th+1)*sizeof(off_t));
                read(fd0,offsets0,(ui_n_th+1)*sizeof(off_t));
                double** nd_arr00=(double**) malloc(ui_n_th*sizeof(double*));
+               #pragma omp parallel for schedule(static) num_threads((ui_n_th<=(unsigned int)omp_get_max_threads())?ui_n_th:(unsigned int)omp_get_max_threads()) if((m>128 || n>128)||(mode3_inp->max_m_sz>=32 && ui_n_th>=4))
                for(unsigned int i=0;i<ui_n_th;i++){
                     //unsigned int buff_n=(offsets0[i+1]-offsets0[i])/sizeof(unsigned int);
                     unsigned int* m3_buff=(unsigned int*) malloc(offsets0[i+1]-offsets0[i]);//TODO check if not off by 1;

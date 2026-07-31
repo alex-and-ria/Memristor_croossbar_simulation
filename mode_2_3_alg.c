@@ -31,8 +31,10 @@
 
 #include <time.h>
 void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl,mode_3_param* mode3_inp,unsigned int shift,FILE* fp){
-     struct timespec curr_time; long long unsigned int tick,dt_time;
+     //struct timespec curr_time; long long unsigned int tick,dt_time;
      //if(fp!=NULL) fprintf(fp,"\nmode2; nds_td j iter\n");
+     
+     (void)fp;
      node *prev_node, *curr_node;
      prev_node=node_hd;
      unsigned int *ui_ptr; unsigned int ui_val; double* d_ptr;
@@ -50,7 +52,7 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           mrg[i].cap=0;
      }
      for(unsigned int i=0;i<nds_n;i++){
-          clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
+          //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           double sum=0;
           unsigned int n0=nds_td[i],n1;
           node* nd0=node_arr[nds_td[i]-1];
@@ -149,9 +151,9 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                
           
           }
-          clock_gettime(CLOCK_MONOTONIC,&curr_time);
+          /*clock_gettime(CLOCK_MONOTONIC,&curr_time);
           dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
-          if(fp!=NULL) fprintf(fp,"%llu\n",dt_time);
+          if(fp!=NULL) fprintf(fp,"%llu\n",dt_time);*/
           
      }
      node nd_ptr;
@@ -227,7 +229,7 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           (*vl)=(double**) malloc((*(mode3_inp->n_th))*sizeof(double*));
           (*(mode3_inp->ln))=(unsigned int*) malloc((*(mode3_inp->n_th))*sizeof(unsigned int));
           max_nds=max_nds-node_hd->num+1;
-          dt_time=0;
+          //dt_time=0;
           out_fl=1;
           num_thr=*(mode3_inp->n_th);
           #pragma omp parallel for schedule(static) num_threads((num_thr<=omp_get_max_threads())?num_thr:omp_get_max_threads()) private(curr_node,prev_node) if((mode3_inp->tgt_n1>=64 && mode3_inp->max_m_sz>3) || mode3_inp->tgt_n1>64)
