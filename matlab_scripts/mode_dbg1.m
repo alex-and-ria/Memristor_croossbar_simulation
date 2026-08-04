@@ -32,7 +32,7 @@
 
 
 
-m=128; n=m; batch_size=1;
+m=4; n=m; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
@@ -90,7 +90,7 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
 
 setdatatype(len_pp.Value,'uint32Ptr',n_th_p.Value);
 
-%G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
+G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
 
 
 if(0)%n_th_p.Value>=1)

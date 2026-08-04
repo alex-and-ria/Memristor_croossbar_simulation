@@ -44,8 +44,8 @@ void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len
      unsigned int buff_sz=64; char ch_buff[buff_sz];
      snprintf(ch_buff,buff_sz,"mode1_%ux%u",m,n);
      int fd=open(ch_buff, O_RDWR | O_CREAT | O_TRUNC,0644);
-     snprintf(ch_buff,buff_sz,"mode1:\n");
-     write(fd,ch_buff,strlen(ch_buff));
+     //snprintf(ch_buff,buff_sz,"mode1:\n");
+     //write(fd,ch_buff,strlen(ch_buff));
      node** node_arr=(node**) malloc(max_nds*sizeof(node*));
      unsigned int* nds_td0=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int* nds_td_rem=(unsigned int*) malloc(max_nds*sizeof(unsigned int));

@@ -376,7 +376,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
                clock_gettime(CLOCK_MONOTONIC,&curr_time);
                dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
                //printf("\nmode_1_online=%llu\n",dt_time);
-               printf("\n%llu,",dt_time);
+               printf("\n%llu\n",dt_time);
                clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
                mode_1_alg_offline_w(row,col,*len, nds_td,*nds_n,th_nb_koef,out_fl,NULL,M_DIM,N_DIM);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
                clock_gettime(CLOCK_MONOTONIC,&curr_time);

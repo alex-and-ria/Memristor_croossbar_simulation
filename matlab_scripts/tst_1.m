@@ -24,7 +24,7 @@ fl_nm=strcat('/share/share0/abc/star_mesh/rw_.h');
 if(f_id<0)
      disp('f_id<0');
 end
-m=4; n=m; batch_size=1;
+m=128; n=m; batch_size=1;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
@@ -34,7 +34,7 @@ nds_td=1:2*m*n;
 
 
 
-max_m_sz=size(nds_tgt,2)/4;
+max_m_sz=size(nds_tgt,2);
 fprintf(f_id,"#define M_DIM %u\n#define N_DIM %u\n",m,n);
 fprintf(f_id,"unsigned char fl_omp=%u;\n",fl_omp);
 %fprintf(f_id,"#define fl_nm ""OpenMP_timing/OpenMP_tst_%dx%d_%d.csv""\n",m,n,jj);
