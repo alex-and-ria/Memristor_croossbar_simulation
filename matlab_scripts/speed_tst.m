@@ -32,42 +32,34 @@
 
 
 
-m=4; n=m; batch_size=1;%TODO correctness and threshold;
+%m=5; n=m; batch_size=4;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
 [G_m,Ivec]=adj_to_lapl(G_adj,m,n,Vin);
 tic()
      [L,U,P]=lu(G_m);
-toc();
+lu_t=toc();
 tic()
      y=L\(P*Ivec);
-toc()
+l_t=toc();
 tic()
-     x=U\y;
-toc()
-
-figure(1); spy(G_m);
-figure(2); spy(L);
-figure(3); spy(U);
-
-
+     x_orgn=U\y;
+u_t=toc();
+sprintf("\n%g,%g,%g",lu_t,l_t,u_t)
+%figure(1); spy(G_m);
+%figure(2); spy(L);
+%figure(3); spy(U);
 
 loadlibrary('../libnode_schr.so','../node_schr.h')
-libfunctions('libnode_schr','-full')
-mode='mode1_1';%mode1_1, mode1_2, mode2_2, mode3_0;
-% mode 1, one iteration (4x4 crossbar);
+%libfunctions('libnode_schr','-full')
 nds_td=1:2*m*n; [nds_td,nds_tgt]=pune_ntd(nds_td,m,n);
 
 row_p=libpointer('uint32Ptr',row);
-%rw_vp=libpointer('voidPtr', libpointer('uint32PtrPtr',libpointer('uint32Ptr',0)));
 rw_vp=libpointer('uint64Ptr',0);%memory for 64-bit address, to keep raw address (for tripple pointer);
-%ui64_tmp=calllib('libnode_schr','get_pointer',uiptrptr,1);
 col_p=libpointer('uint32Ptr',col);
-%cl_vp=libpointer('voidPtr',libpointer('uint32PtrPtr',libpointer('uint32Ptr',0)));
 cl_vp=libpointer('uint64Ptr',0);
 val_p=libpointer('doublePtr',val);
-%vl_vp=libpointer('voidPtr', libpointer('uint32PtrPtr',libpointer('uint32Ptr',0)));
 vl_vp=libpointer('uint64Ptr',0);
 len_p=libpointer('uint32Ptr',length(row));
 len_pp=libpointer('uint32PtrPtr');
@@ -75,9 +67,15 @@ nds_td_p=libpointer('uint32Ptr',nds_td); nds_n=libpointer('uint32Ptr',length(nds
 nds_td1_p=libpointer('uint32Ptr',nds_tgt); nds_n1=length(nds_tgt); 
 n_th_p=libpointer('uint32Ptr',0);
 
-null_uip=libpointer('uint32Ptr');
-max_m_sz=nds_n1+1;%set 2 submatrixes for mode 3;
+%null_uip=libpointer('uint32Ptr');
+%max_m_sz=nds_n1;%set 2 submatrixes for mode 3;
 
+%nds_n_req=10; length(nds_td)+1;%nds_n_req<(length(nds_td)+length(nds_tgt))
+if(nds_n_req>length(nds_td))
+     max_m_sz=length(nds_tgt)-(nds_n_req-length(nds_td));
+else
+     max_m_sz=length(nds_tgt);
+end
 calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      col_p,cl_vp,...
      val_p,vl_vp,...
@@ -86,14 +84,35 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      0.,...%smaller the number for mode_1_2_3, the more mode 1 is utilized;
      nds_td1_p, nds_n1,...
      n_th_p,max_m_sz,...%set 2 submatrixes for mode 3;
-     2,0);%mode_1_2_3
+     2,0,...;%mode_1_2_3
+     m,n,nds_n_req)
 
 setdatatype(len_pp.Value,'uint32Ptr',n_th_p.Value);
+agrtd_A=zeros(max_m_sz,max_m_sz,n_th_p.Value);%in 3D, array display is going in third corrdinate
+agrtd_b=zeros(max_m_sz,batch_size,n_th_p.Value);
+if(nds_n_req<=length(nds_td))%means that only mode 1 and, maybe mode 2 is called;
+     rw_c=libpointer('uint32PtrPtr');
+     cl_c=libpointer('uint32PtrPtr');
+     vl_c=libpointer('doublePtrPtr');
+     calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
+               rw_c,cl_c,vl_c,0);%store data in rw_c,cl_c,vl_c;
+     setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value(1));
+     setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value(1));
+     setdatatype(vl_c.Value,'doublePtr',len_pp.Value(1));
+     G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
+     [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
+     G_m0=G_m(any(G_m,2),any(G_m,1));
+     Ivec00=Ivec0(any(G_m,2),any(Ivec0,1));
+     tic()
+     x_curr=G_m0\Ivec00;
+     dns_t=toc();
+     sprintf(",%g",dns_t)
+     
+     
 
-G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
-
-
-if(0)%n_th_p.Value>=1)
+     
+elseif(nds_n_req>length(nds_td))
+     dns_t=0;
      for(ii=0:(n_th_p.Value-1))
           rw_c=libpointer('uint32PtrPtr');
           cl_c=libpointer('uint32PtrPtr');
@@ -105,69 +124,29 @@ if(0)%n_th_p.Value>=1)
           setdatatype(vl_c.Value,'doublePtr',len_pp.Value(ii+1));
           G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
           [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
-          [L,U,P]=lu(G_m); y=L\(P*Ivec0); x=U\y;
-          nds_td1_tmp=[];
-          nds_td1_tmp(1:ii*max_m_sz)=nds_tgt(1:ii*max_m_sz);
-          if(ii~=(n_th_p.Value-1))
-               nds_td1_tmp(ii*max_m_sz+1:nds_n1-max_m_sz)=nds_tgt((ii+1)*max_m_sz+1:nds_n1);
-          end
-          G_one_iter1=star_mesh_one_iter(G_one_iter,nds_td1_tmp);%node deletion in Matlab;
-          figure(double(2*(ii+1))); spy(G_one_iter);%resulting adjacency matrix (after Matlab implementation);
-          figure(double(2*(ii+1)+1)); spy(G_one_iter-G_iter)%difference with C result;
-          sum(sum(abs(G_one_iter1-G_iter)))
-
+          G_m0=G_m(any(G_m,2),any(G_m,1));
+          Ivec00=Ivec0(any(Ivec0,2),any(Ivec0,1));
+          tic()
+          x_curr=G_m0\Ivec00;
+          dns_t=dns_t+toc();
           
+          agrtd_A(1:size(G_m0,1),1:size(G_m0,2),ii+1)=G_m0;
+          agrtd_b(1:size(Ivec00,1),1:size(Ivec00,2),ii+1)=Ivec00;
           
-          
-          [Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);%ground truth approximation;
-          sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
-          max(abs(sol_diff(~isnan(x))))
      end
-elseif(1)
-     %q=calllib('libnode_schr','tst_pnt',33);
-     rw_c=libpointer('uint32PtrPtr');
-     cl_c=libpointer('uint32PtrPtr');
-     vl_c=libpointer('doublePtrPtr');
-     calllib('libnode_schr','get_dbg_arr', rw_vp, cl_vp, vl_vp,...
-          rw_c,cl_c,vl_c,0);%store data in rw_c,cl_c,vl_c;
-     setdatatype(rw_c.Value,'uint32Ptr',len_pp.Value);
-     setdatatype(cl_c.Value,'uint32Ptr',len_pp.Value);
-     setdatatype(vl_c.Value,'doublePtr',len_pp.Value);
-
-     %nds_td=[1, 6, 8, 9, 17, 23, 25, 31,...
-     %     2, 7, 12, 21, 27,...
-     %     3, 13, 19, 29
-     %     ];%this is what nodes get deleted in first iteration of mode1 for 4x4 crossbar;
-
-     %G_one_iter=star_mesh_one_iter(G_adj,nds_td);%node deletion in Matlab;
-     G_iter=sparse(rw_c.Value,cl_c.Value,vl_c.Value);
-     %figure(1); spy(G_one_iter);%resulting adjacency matrix (after Matlab implementation);
-     %figure(2); spy(G_one_iter-G_iter)%difference with C result;
-     %sum(sum(abs(G_one_iter-G_iter)))
-
-
-     [G_m, Ivec0]=adj_to_lapl(G_iter,m,n,Vin);
-     G_m00=G_m(cl_c.Value(1):end,cl_c.Value(1):end);
-     Ivec00=Ivec0(cl_c.Value(1):end,1);
-     tic();
-          [L,U,P]=lu(G_m00);
-     toc();
      
-     tic();
-          y=L\(P*Ivec00);
-     toc();
-     tic();
-          x=U\y;
-     toc();
-     figure(4); spy(G_m00);
-     figure(5); spy(L);
-     figure(6); spy(U);
-     %[Lm,Ivec]=gen_lapl(Cnds,Gwl,Gbl,Vin);%ground truth approximation;
-     %sol_diff=Lm\Ivec-x; %disp(sol_diff(~isnan(x)));%compare solutions of original conductance matrix and solutions after C node deletion;
-     %max(abs(sol_diff(~isnan(x))))
      
+     tic()
+     for ii=1:n_th_p.Value
+          agrtd_A(:,:,ii)\agrtd_b(:,ii);
+
+     end
+     dns_t_agg=toc();
+     sprintf(",%g,%g",dns_t,dns_t_agg)
      
 end
+
+
 
 calllib('libnode_schr','data_free',rw_vp, cl_vp, vl_vp,len_pp,n_th_p);
 %q=33;
@@ -362,7 +341,8 @@ end
 
 function [G_m,Ivec]=adj_to_lapl(G_adj,m,n,Vin)
      G_m=sparse(2*m*n,2*m*n);
-     Ivec=sparse(2*m*n,1);
+     batch_size=size(Vin,2);
+     Ivec=sparse(2*m*n,batch_size);
      for ii=1:2*m*n
           [~,col,val]=find(G_adj(ii,1:2*m*n));
           G_m(ii,ii)=sum(val)+sum(G_adj(ii,2*m*n+1:size(G_adj,2)));
@@ -372,14 +352,18 @@ function [G_m,Ivec]=adj_to_lapl(G_adj,m,n,Vin)
                
           end
           [~,col,val]=find(G_adj(ii,2*m*n+1:2*m*n+m));
-          curr_acc=0;
-          for jj=1:length(col)
-               curr_acc=curr_acc+val(jj)*Vin(col(jj));
-               
-               
+          for kk=1:batch_size
+               curr_acc=0;
+               for jj=1:length(col)
+                    curr_acc=curr_acc+val(jj)*Vin(col(jj),kk);
+
+
+
+               end
+               Ivec(ii,kk)=curr_acc;
                
           end
-          Ivec(ii)=curr_acc;
+          
           
           
      end

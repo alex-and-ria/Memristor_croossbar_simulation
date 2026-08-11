@@ -38,7 +38,7 @@
 #include <unistd.h>
 
 #include"mode_2_alg_w.c"
-void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n){
+void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n,unsigned int nds_n_req){
      unsigned int max_nds=col[len-1];
      unsigned int min_cap=64, max_cap=max_nds-1;
      unsigned int buff_sz=64; char ch_buff[buff_sz];
@@ -46,12 +46,15 @@ void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len
      int fd=open(ch_buff, O_RDWR | O_CREAT | O_TRUNC,0644);
      //snprintf(ch_buff,buff_sz,"mode1:\n");
      //write(fd,ch_buff,strlen(ch_buff));
+     
+     (void)thr_koef;
+     unsigned int nds_n_curr=0;
      node** node_arr=(node**) malloc(max_nds*sizeof(node*));
      unsigned int* nds_td0=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int* nds_td_rem=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int* nds_td2=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      struct nd_data* curr_mrg=(struct nd_data*) malloc(1*sizeof(struct nd_data));
-     unsigned int* offsets; unsigned int ofst_n=0;
+     unsigned int* offsets=NULL; unsigned int ofst_n=0;
      unsigned int max_offst_elm=0;//find the maximum buffer need to store biggest neighbour list and additionally its size and pivot number;
      off_t curr_fl_pos=lseek(fd, 0, SEEK_CUR);
      write(fd,&max_offst_elm,sizeof(unsigned int));//write as placeholder; when calculate maximum offset size in bytes, write it at same ofset;
@@ -116,7 +119,7 @@ void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len
           nds_td2[i]=nds_td[i];
      
      }
-     double curr_thr_koef=0;
+     //double curr_thr_koef=0;
      while(1/*dbg_cnt<dbg_max*/){
      for(unsigned int i=0;i<max_nds;i++){
           nds_td0[i]=0; nds_td_rem[i]=0;
@@ -158,8 +161,8 @@ void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len
           }
      
      }
-     if(nds_n0>=1) curr_thr_koef=(nds_n0+0.)/(nds_n0+nds_n_rem);
-     if(nds_n0<=1 || curr_thr_koef<thr_koef){
+     //if(nds_n0>=1) curr_thr_koef=(nds_n0+0.)/(nds_n0+nds_n_rem);
+     if(nds_n0<=1 || nds_n_curr>=nds_n_req){
           nds_n0=0;
           write(fd,&nds_n0,sizeof(unsigned int));//use zero as delimiter to signify transition to the next mode (mode2 or to output);
           
@@ -332,7 +335,7 @@ void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len
      }
      /////////////////////////////////at this point nums array are edited to match new graph connectivity;
      
-     
+     nds_n_curr+=nds_n0;
      ui_ptr=nds_td2; nds_td2=nds_td_rem; nds_td_rem=ui_ptr;
      nds_n2=nds_n_rem; nds_n0=0; nds_n_rem=0;
      }
@@ -374,7 +377,7 @@ void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len
      }
      else{//continue to mode2 and mode3
           out_fl--;
-          mode_2_alg_w(node_arr,nds_td2,nds_n2, node_hd,max_nds,out_fl,mode3_inp,fd,&max_offst_elm,m,n);
+          mode_2_alg_w(node_arr,nds_td2,nds_n2, node_hd,max_nds,out_fl,mode3_inp,fd,&max_offst_elm,m,n,&nds_n_curr,nds_n_req);
           free(nds_td0);
           free(nds_td_rem);
           free(node_arr);

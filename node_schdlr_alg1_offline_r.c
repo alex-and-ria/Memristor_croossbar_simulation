@@ -292,11 +292,7 @@ clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll 
                for(unsigned int i=0;i<ui_n_th;i++){
                     nd_arr00[i]=(double*) malloc((((size_t)max_nds0*(max_nds0-1))/2)*sizeof(double));//preallocate memore outside parallel loop to decrease amount of locks (operationg system's heap manager);
                }
-     //struct timespec curr_time; long long unsigned int tick,dt_time;
-     //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
-               #pragma omp parallel for schedule(static) num_threads((ui_n_th<=(unsigned int)omp_get_max_threads())?ui_n_th:(unsigned int)omp_get_max_threads()) if((n>=64 && mode3_inp->max_m_sz>2) || (n>64)
-               //if((m>=64 || n>=128)||(mode3_inp->max_m_sz>=32 && ui_n_th>=4))
-               //
+               #pragma omp parallel for schedule(static) num_threads((ui_n_th<=(unsigned int)omp_get_max_threads())?ui_n_th:(unsigned int)omp_get_max_threads()) if((n>=64 && mode3_inp->max_m_sz>2) || (n>64))
                for(unsigned int i=0;i<ui_n_th;i++){
                     //unsigned int buff_n=(offsets0[i+1]-offsets0[i])/sizeof(unsigned int);
                     //unsigned int* m3_buff=(unsigned int*) malloc(offsets0[i+1]-offsets0[i]);//TODO check if not off by 1;
@@ -370,9 +366,6 @@ clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll 
                     
           
                }
-          //clock_gettime(CLOCK_MONOTONIC,&curr_time);
-          //dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
-          //printf("\n%llu",dt_time);
                for(unsigned int i=0;i<ui_n_th;i++){
                     free(nd_arr00[i]);//free memore outside parallel loop to decrease amount of locks (operationg system's heap manager);
                }

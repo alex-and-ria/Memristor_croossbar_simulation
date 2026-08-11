@@ -43,5 +43,15 @@ for m=2.^powers
 end
 
 
-=AVERAGE(A1:A10)
+=AVERAGE(A1:A20)
 =STDEV.S(A1:A10)
+
+
+for nds_n_req
+for v in {1..10}; do 
+     /share/reconfig/matlab/bin/matlab -batch "m=4; n=m; batch_size=1; nds_n_req=10; speed_tst" >>4x4x1_10.csv
+done
+
+for v in {1..10}; do
+    matlab -batch "var=$v; var1=2; speed_tst;" > "result_${v}.csv"
+done

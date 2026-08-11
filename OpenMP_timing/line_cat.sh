@@ -81,8 +81,6 @@ while true; do
 done
 
 
-
-
 # Close file descriptors
 for fd in "${fds[@]}"; do
     exec {fd}<&-
