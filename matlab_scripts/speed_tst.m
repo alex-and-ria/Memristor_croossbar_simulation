@@ -32,7 +32,7 @@
 
 
 
-%m=5; n=m; batch_size=4;
+%m=4; n=m; batch_size=2;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
@@ -70,12 +70,19 @@ n_th_p=libpointer('uint32Ptr',0);
 %null_uip=libpointer('uint32Ptr');
 %max_m_sz=nds_n1;%set 2 submatrixes for mode 3;
 
-%nds_n_req=10; length(nds_td)+1;%nds_n_req<(length(nds_td)+length(nds_tgt))
+
+
+
+
+
+
+%nds_n_req=1;% length(nds_td)+1;%nds_n_req<(length(nds_td)+length(nds_tgt))
 if(nds_n_req>length(nds_td))
      max_m_sz=length(nds_tgt)-(nds_n_req-length(nds_td));
 else
      max_m_sz=length(nds_tgt);
 end
+nds_n_req_p=libpointer('uint32Ptr',nds_n_req);
 calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      col_p,cl_vp,...
      val_p,vl_vp,...
@@ -85,9 +92,10 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      nds_td1_p, nds_n1,...
      n_th_p,max_m_sz,...%set 2 submatrixes for mode 3;
      2,0,...;%mode_1_2_3
-     m,n,nds_n_req)
+     m,n,nds_n_req_p)
 
 setdatatype(len_pp.Value,'uint32Ptr',n_th_p.Value);
+sprintf(",%u",nds_n_req_p.Value)
 agrtd_A=zeros(max_m_sz,max_m_sz,n_th_p.Value);%in 3D, array display is going in third corrdinate
 agrtd_b=zeros(max_m_sz,batch_size,n_th_p.Value);
 if(nds_n_req<=length(nds_td))%means that only mode 1 and, maybe mode 2 is called;
@@ -106,13 +114,21 @@ if(nds_n_req<=length(nds_td))%means that only mode 1 and, maybe mode 2 is called
      tic()
      x_curr=G_m0\Ivec00;
      dns_t=toc();
-     sprintf(",%g",dns_t)
+     dns_t_f=dns_t;
+     if((size(G_m0,1)*size(G_m0,2))<(50*1024*1024*1024/8))%if memory reqirement for full matrix
+          %less then 50 Gb, calculate full matrix
+          G_m0=full(G_m0); Ivec00=full(Ivec00);
+          tic()
+          x_curr=G_m0\Ivec00;
+          dns_t_f=toc();
+     end
+     sprintf(",%g,%g,",dns_t,dns_t_f)
      
      
 
      
 elseif(nds_n_req>length(nds_td))
-     dns_t=0;
+     dns_t=0;dns_t_f=0;
      for(ii=0:(n_th_p.Value-1))
           rw_c=libpointer('uint32PtrPtr');
           cl_c=libpointer('uint32PtrPtr');
@@ -130,6 +146,13 @@ elseif(nds_n_req>length(nds_td))
           x_curr=G_m0\Ivec00;
           dns_t=dns_t+toc();
           
+          
+          
+          G_m0=full(G_m0); Ivec00=full(Ivec00);
+          tic()
+          x_curr=G_m0\Ivec00;
+          dns_t_f=dns_t_f+toc();
+     
           agrtd_A(1:size(G_m0,1),1:size(G_m0,2),ii+1)=G_m0;
           agrtd_b(1:size(Ivec00,1),1:size(Ivec00,2),ii+1)=Ivec00;
           
@@ -142,7 +165,7 @@ elseif(nds_n_req>length(nds_td))
 
      end
      dns_t_agg=toc();
-     sprintf(",%g,%g",dns_t,dns_t_agg)
+     sprintf(",%g,%g,%g",dns_t,dns_t_f,dns_t_agg)
      
 end
 

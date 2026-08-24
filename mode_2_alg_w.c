@@ -30,7 +30,7 @@
 
 
 
-void mode_2_alg_w(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned char out_fl,mode_3_param* mode3_inp,int fd, unsigned int* max_offst_elm,unsigned int m,unsigned int n,unsigned int* nds_n_curr, unsigned int nds_n_req){//nds_n0=0 as terminat, set max size at the beggining
+void mode_2_alg_w(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned char out_fl,mode_3_param* mode3_inp,int fd, unsigned int* max_offst_elm,unsigned int m,unsigned int n,unsigned int* nds_n_curr, unsigned int* nds_n_req){//nds_n0=0 as terminat, set max size at the beggining
      node *prev_node, *curr_node;
      prev_node=node_hd;
      unsigned int *ui_ptr; unsigned int ui_val;
@@ -38,7 +38,7 @@ void mode_2_alg_w(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node
      struct nd_data* mrg=(struct nd_data*) malloc(1*sizeof(struct nd_data)); mrg->cap=0;
      
      unsigned int i=0;
-     for(;i<nds_n && (*nds_n_curr)<nds_n_req;i++){
+     for(;i<nds_n && (*nds_n_curr)<(*nds_n_req);i++){
           unsigned int n0=nds_td[i],n1;
           unsigned int ui_curr=0;
           node* nd0=node_arr[nds_td[i]-1];
@@ -117,7 +117,7 @@ void mode_2_alg_w(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node
                
           
           }
-          (*nds_n_curr)+=1;
+          (*nds_n_curr)++;
           
      }
      node nd_ptr;
@@ -153,7 +153,7 @@ void mode_2_alg_w(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node
      
      unsigned int ui_curr=0;
      write(fd,&(ui_curr),sizeof(unsigned int));//write zero to signal thansition to next mode (mode3 or output);
-     if(out_fl==1 || (*nds_n_curr)>=nds_n_req){
+     if(out_fl==1 || (*nds_n_curr)>=(*nds_n_req)){
           ui_curr=0;//len;
           for(curr_node=node_hd;curr_node!=NULL;curr_node=curr_node->next){
                ui_curr+=curr_node->n;
@@ -245,8 +245,8 @@ void mode_2_alg_w(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node
                node* node_hd0=node_arr0[0];
                
                //mode_2_alg(node_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL,node_hd->num-1,NULL);
-               unsigned int nds_n_curr0=0;
-               mode_2_alg_w(node_arr0,nds_td00,nds_n00,node_hd0,max_nds,out_fl,NULL,fd0,NULL,m,n,&nds_n_curr0,nds_n00);//nds_n_curr0 should go from 0 to nds_n00 in mode 2 (just like loop variable) to not interfere wiht loop condition; 
+               unsigned int nds_n_curr0=0; unsigned int nds_n_req0=nds_n00;
+               mode_2_alg_w(node_arr0,nds_td00,nds_n00,node_hd0,max_nds,out_fl,NULL,fd0,NULL,m,n,&nds_n_curr0,&nds_n_req0);//nds_n_curr0 should go from 0 to nds_n00 in mode 2 (just like loop variable) to not interfere wiht loop condition; 
                offsets[i+1]=lseek(fd0, 0, SEEK_CUR);
                free(node_arr0);
                free(nds_td00);

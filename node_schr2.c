@@ -295,7 +295,7 @@ void mode3_f(unsigned int ***rw0,unsigned int *rw00, unsigned int ***cl0, unsign
 
 }
 
-void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *col, unsigned long long int* cl_v, double *val, unsigned long long int* vl_v, unsigned int *len,unsigned int **ln_, unsigned int *nds_td, unsigned int *nds_n,double th_nb_koef, unsigned int *nds_td1, unsigned int nds_n1, unsigned int* n_th,unsigned int max_m_sz, int mode_dbg, unsigned int num_iter,unsigned int m_dim, unsigned int n_dim,unsigned int nds_n_req){//unsigned long long int* here acts as generic void*, but stored as plain 64-bit number;
+void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *col, unsigned long long int* cl_v, double *val, unsigned long long int* vl_v, unsigned int *len,unsigned int **ln_, unsigned int *nds_td, unsigned int *nds_n,double th_nb_koef, unsigned int *nds_td1, unsigned int nds_n1, unsigned int* n_th,unsigned int max_m_sz, int mode_dbg, unsigned int num_iter,unsigned int m_dim, unsigned int n_dim,unsigned int* nds_n_req){//unsigned long long int* here acts as generic void*, but stored as plain 64-bit number;
 	enum debug {mode1,mode2,mode_1_2_3};
 	unsigned int*** rw_=(unsigned int***) rw_v; unsigned int*** cl_=(unsigned int***) cl_v; double*** vl_=(double***) vl_v;
      unsigned int *nds_td0;
@@ -363,7 +363,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
      else if(mode_dbg==mode_1_2_3){
           unsigned int out_fl=3;
           if(max_m_sz>=nds_n1) out_fl=2;
-          if(nds_n_req<=(*nds_n)) out_fl=2;
+          if((*nds_n_req)<=(*nds_n)) out_fl=2;
           if(out_fl<3){
                (*rw_)=(unsigned int**)malloc(2*sizeof(unsigned int*));
 		     (*cl_)=(unsigned int**)malloc(2*sizeof(unsigned int*));
@@ -372,7 +372,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
 		     unsigned int len1=0;
                struct timespec curr_time; long long unsigned int tick,dt_time;
                clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
-               mode_1_alg(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,th_nb_koef,out_fl,NULL);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
+               mode_1_alg(row,&((*rw_)[0]),col,&((*cl_)[0]),val,&((*vl_)[0]),*len,&len0, nds_td,*nds_n,th_nb_koef,nds_n_req,out_fl,NULL);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
                clock_gettime(CLOCK_MONOTONIC,&curr_time);
                dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
                //printf("\nmode_1_online=%llu\n",dt_time);
@@ -427,7 +427,7 @@ void dense_rdct(unsigned int *row, unsigned long long int* rw_v, unsigned int *c
                mode3_inp0.max_m_sz=max_m_sz; mode3_inp0.n_th=&n_th00;
                struct timespec curr_time; long long unsigned int tick,dt_time;
                clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
-               mode_1_alg(row,NULL,col,NULL,val,NULL,*len,NULL, nds_td,*nds_n,th_nb_koef,out_fl,&mode3_inp0);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
+               mode_1_alg(row,NULL,col,NULL,val,NULL,*len,NULL, nds_td,*nds_n,th_nb_koef,nds_n_req,out_fl,&mode3_inp0);//here if th_nb_koef=0. then mode1 is until there is every node to delete has common neighbour with all other nodes to delete (nds_n0<=1);
                clock_gettime(CLOCK_MONOTONIC,&curr_time);
                dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
                printf(",3,%llu",dt_time);

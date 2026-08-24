@@ -38,7 +38,7 @@
 #include <unistd.h>
 
 #include"mode_2_alg_w.c"
-void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n,unsigned int nds_n_req){
+void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp,unsigned int m, unsigned int n,unsigned int* nds_n_req){
      unsigned int max_nds=col[len-1];
      unsigned int min_cap=64, max_cap=max_nds-1;
      unsigned int buff_sz=64; char ch_buff[buff_sz];
@@ -162,12 +162,17 @@ void mode_1_alg_offline_w(unsigned int *row, unsigned int *col, unsigned int len
      
      }
      //if(nds_n0>=1) curr_thr_koef=(nds_n0+0.)/(nds_n0+nds_n_rem);
-     if(nds_n0<=1 || nds_n_curr>=nds_n_req){
+     if(nds_n0<=1){
           nds_n0=0;
           write(fd,&nds_n0,sizeof(unsigned int));//use zero as delimiter to signify transition to the next mode (mode2 or to output);
-          
           break;
      
+     }
+     if(nds_n_curr>=(*nds_n_req)){
+          nds_n0=0;
+          write(fd,&nds_n0,sizeof(unsigned int));//use zero as delimiter to signify transition to the next mode (mode2 or to output);
+          (*nds_n_req)=nds_n_curr;
+          break;
      }
      /////////////////////////////////////////at this point nds_td0 (nodes to delete) and nds_td_rem (nodes left, delete on next iteration) should set up;
     

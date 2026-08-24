@@ -55,7 +55,7 @@ Vin1=(Vin==1)*V_1+(Vin==0)*V_0;
 %
 cont_fl=0;
 %for ii=1:length(Gwl_swp)
-ii=1;
+ii=1; ii_prev=0;
 while ii<=length(Gwl_swp)
      Gwl=Gwl_swp(ii);
      Gbl=Gwl_swp(ii);
@@ -67,7 +67,10 @@ while ii<=length(Gwl_swp)
           
      end
 
-units_mn=Units(m,n,1,V_0,V_1,R_on,R_off,Gwl,Gbl);
+if(ii~=ii_prev)
+     units_mn=Units(m,n,1,V_0,V_1,R_on,R_off,Gwl,Gbl);
+     ii_prev=ii;
+end
 
 %[G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0,R_on,R_off);
 
@@ -117,7 +120,7 @@ elseif(n>=n_dt)
      ii=ii+1;
 end
 %%figure(1); plot(1:n,out_bin(:,1:ii),'r',1:n,out_ref(:,1:ii),'g',1:n,out_wb(:,1:ii),'b');
-
+figure(1); plot(1:n,out_I2,'g',1:n,out_I_Gwb./normlzr','b');
 %pause
 %
 end
@@ -166,17 +169,17 @@ function G_adj=adj_m_w(Cnds,Gwl,Gbl,R_on,R_off)
                
                if(ii==1)
                     G_adj(n_nd(ii,jj,1),n_nd(ii+1,jj,1))=Gbl;
-                    G_adj(n_nd(ii,jj,1),n_nd(ii,jj,0))=Cnds(ii,jj);
+                    G_adj(n_nd(ii,jj,1),n_nd(ii,jj,0))=Cnds1(ii,jj);
                     
                elseif(ii==m)
                     G_adj(n_nd(ii,jj,1),n_nd(ii-1,jj,1))=Gbl;
                     G_adj(n_nd(ii,jj,1),2*m*n+m+1)=Gbl;
-                    G_adj(n_nd(ii,jj,1),n_nd(ii,jj,0))=Cnds(ii,jj);
+                    G_adj(n_nd(ii,jj,1),n_nd(ii,jj,0))=Cnds1(ii,jj);
                     
                else
                     G_adj(n_nd(ii,jj,1),n_nd(ii-1,jj,1))=Gbl;
                     G_adj(n_nd(ii,jj,1),n_nd(ii+1,jj,1))=Gbl;
-                    G_adj(n_nd(ii,jj,1),n_nd(ii,jj,0))=Cnds(ii,jj);
+                    G_adj(n_nd(ii,jj,1),n_nd(ii,jj,0))=Cnds1(ii,jj);
                     
                end
                

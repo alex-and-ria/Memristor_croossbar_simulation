@@ -30,7 +30,7 @@
 
 
 #include <time.h>
-void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl,mode_3_param* mode3_inp,unsigned int shift,FILE* fp){
+void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* node_hd, unsigned int max_nds, unsigned int** rw, unsigned int** cl, double **vl, unsigned int *ln, unsigned char out_fl,mode_3_param* mode3_inp,unsigned int shift,FILE* fp,unsigned int* nds_n_curr, unsigned int* nds_n_req){
      //struct timespec curr_time; long long unsigned int tick,dt_time;
      //if(fp!=NULL) fprintf(fp,"\nmode2; nds_td j iter\n");
      
@@ -51,7 +51,8 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
      for(unsigned int i=0;i<mrg_sz;i++){
           mrg[i].cap=0;
      }
-     for(unsigned int i=0;i<nds_n;i++){
+     unsigned int i=0;
+     for(i=0;i<nds_n && (*nds_n_curr)<(*nds_n_req);i++){
           //clock_gettime(CLOCK_MONOTONIC,&curr_time); tick=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec;
           double sum=0;
           unsigned int n0=nds_td[i],n1;
@@ -154,13 +155,14 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
           /*clock_gettime(CLOCK_MONOTONIC,&curr_time);
           dt_time=curr_time.tv_sec * 1000000000ll + curr_time.tv_nsec-tick;
           if(fp!=NULL) fprintf(fp,"%llu\n",dt_time);*/
+          (*nds_n_curr)++;
           
      }
      node nd_ptr;
      nd_ptr.next=node_hd;
      curr_node=node_hd; prev_node=&nd_ptr;
-     for(unsigned int i=0;i<nds_n;){
-          if(curr_node->num==nds_td[i]){
+     for(unsigned int j=0;j<nds_n && j<i;){
+          if(curr_node->num==nds_td[j]){
                prev_node->next=curr_node->next;
                if(curr_node==node_hd){
                     node_hd=curr_node->next;
@@ -169,7 +171,7 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                free(curr_node->nums);
                free(curr_node->vals);
                curr_node=prev_node->next;
-               i++;
+               j++;
           
           }
           else{
@@ -280,7 +282,8 @@ void mode_2_alg(node** node_arr,unsigned int *nds_td, unsigned int nds_n, node* 
                }
                node* node_hd0=node_arr0[0];
                
-               mode_2_alg(node_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL,node_hd->num-1,NULL);
+               unsigned int nds_n_curr0=0; unsigned int nds_n_req0=nds_n00;
+               mode_2_alg(node_arr0,nds_td00,nds_n00,node_hd0,max_nds, &((*rw)[i]), &((*cl)[i]), &((*vl)[i]),&((*(mode3_inp->ln))[i]),out_fl,NULL,node_hd->num-1,NULL,&nds_n_curr0,&nds_n_req0);
                free(node_arr0);
                free(nds_td00);
                free(node_mem);

@@ -57,11 +57,12 @@ struct nd_data{unsigned int cap; unsigned int* nums; double* vals;};
 
 #include"mode_2_3_alg.c"
 
-void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned char out_fl, mode_3_param* mode3_inp){//TODO fix dt_times, fix printf; benchmark, use opmp thr;
+void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned int** cl, double *val,double** vl, unsigned int len,unsigned int *ln, unsigned int *nds_td, unsigned int nds_n, double thr_koef, unsigned int* nds_n_req,unsigned char out_fl, mode_3_param* mode3_inp){//TODO fix dt_times, fix printf; benchmark, use opmp thr;
      unsigned int max_nds=col[len-1];
      unsigned int min_cap=64, max_cap=max_nds-1;
      //FILE* fp=fopen(fl_nm, "w+");
      //fprintf(fp,"\nmode1:\n"/*fl_pl=,%d",fl_pl*/);
+     unsigned int nds_n_curr=0;
      node** node_arr=(node**) malloc(max_nds*sizeof(node*));
      unsigned int* nds_td0=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
      unsigned int* nds_td_rem=(unsigned int*) malloc(max_nds*sizeof(unsigned int));
@@ -182,6 +183,11 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      if(nds_n0<=1 || curr_thr_koef<thr_koef){
           //fprintf(fp,"\nnds_n0=%d\n",nds_n0);
           
+          break;
+     
+     }
+     if(nds_n_curr>=*nds_n_req){
+          (*nds_n_req)=nds_n_curr;
           break;
      
      }
@@ -329,6 +335,9 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      /////////////////////////////////at this point nums array are edited to match new graph connectivity;
      
      
+     
+     
+     nds_n_curr+=nds_n0;
      ui_ptr=nds_td2; nds_td2=nds_td_rem; nds_td_rem=ui_ptr;
      nds_n2=nds_n_rem; nds_n0=0; nds_n_rem=0;
      }
@@ -375,7 +384,7 @@ void mode_1_alg(unsigned int *row,unsigned int** rw, unsigned int *col,unsigned 
      else{
           out_fl--;
           //mode_2_alg(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,fp);
-          mode_2_alg(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,NULL);
+          mode_2_alg(node_arr,nds_td2,nds_n2, node_hd,max_nds,rw,cl,vl,ln,out_fl,mode3_inp,0,NULL,&nds_n_curr, nds_n_req);
           free(nds_td0);
           free(nds_td_rem);
           free(sums);

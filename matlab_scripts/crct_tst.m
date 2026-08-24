@@ -32,7 +32,7 @@
 
 
 
-m=256; n=m; batch_size=2;
+m=4; n=m; batch_size=2;
 Gwl=1./100; Gbl=4./100;
 [G_adj, Vin, Cnds]=init_cb(m,n,batch_size,Gwl,Gbl,0);
 [row,col,val]=find(G_adj);
@@ -65,7 +65,8 @@ n_th_p=libpointer('uint32Ptr',0);
 %max_m_sz=nds_n1;%set 2 submatrixes for mode 3;
 
 
-nds_n_req=length(nds_td)+3;%nds_n_req<(length(nds_td)+length(nds_tgt))
+nds_n_req=29;%length(nds_td)-5;%nds_n_req<(length(nds_td)+length(nds_tgt))
+nds_n_req_p=libpointer('uint32Ptr',nds_n_req);
 if(nds_n_req>length(nds_td))
      max_m_sz=length(nds_tgt)-(nds_n_req-length(nds_td));
 else
@@ -80,7 +81,7 @@ calllib('libnode_schr','dense_rdct',row_p,rw_vp,...
      nds_td1_p, nds_n1,...
      n_th_p,max_m_sz,...%set 2 submatrixes for mode 3;
      2,0,...;%mode_1_2_3
-     m,n,nds_n_req)
+     m,n,nds_n_req_p)
 
 setdatatype(len_pp.Value,'uint32Ptr',n_th_p.Value);
 if(nds_n_req<=length(nds_td))%means that only mode 1 and, maybe mode 2 is called;
